@@ -27,6 +27,7 @@ import ProductDetail from './pages/shop/ProductDetail';
 import Sponsorship from './pages/Sponsorship';
 import UserProfile from './pages/UserProfile';
 import Unauthorized from './pages/Unauthorized';
+import ContactUs from './pages/ContactUs';
 
 // Admin Pages
 import WeeklyDashboard from './pages/admin/WeeklyDashboard';
@@ -88,6 +89,9 @@ function App() {
 
             {/* Sponsorship */}
             <Route path="/sponsorship" element={<Sponsorship />} />
+
+            {/* Contact Us */}
+            <Route path="/contact" element={<ContactUs />} />
           </Route>
 
           {/* Admin Routes - With Admin Layout */}

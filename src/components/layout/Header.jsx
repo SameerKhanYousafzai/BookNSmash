@@ -11,11 +11,12 @@ export default function Header() {
 
     const navigation = [
         { name: 'Home', path: '/' },
-        { name: 'Matches', path: '/matches' },
+        // { name: 'Matches', path: '/matches' },
         { name: 'Events', path: '/events' },
         { name: 'Venues', path: '/venues' },
         { name: 'Community', path: '/community' },
-        { name: 'Shop', path: '/shop' },
+        // { name: 'Shop', path: '/shop' },
+        { name: 'Contact Us', path: '/contact' },
     ];
 
     const isActive = (path) => location.pathname === path;

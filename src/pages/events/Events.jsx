@@ -100,76 +100,91 @@ export default function Events() {
             </div>
 
             {/* Events Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 {filteredEvents.map((event) => (
                     <Link key={event.id} to={`/events/${event.id}`}>
-                        <Card className="group cursor-pointer h-full hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2">
-                            <div className="relative h-56 rounded-t-xl overflow-hidden">
+                        <Card className="group cursor-pointer h-full hover:shadow-xl transition-all duration-300 overflow-hidden">
+                            {/* Image Section */}
+                            <div className="relative h-48 overflow-hidden">
                                 <img
                                     src={event.image}
                                     alt={event.title}
-                                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                                 />
-                                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
-                                <div className="absolute top-4 right-4">
-                                    <span className={`px-3 py-1 rounded-full text-xs font-semibold ${event.status === 'Open'
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
+
+                                {/* Status Badge */}
+                                <div className="absolute top-3 right-3">
+                                    <span className={`px-3 py-1 rounded-full text-xs font-bold shadow-lg ${event.status === 'Open'
                                         ? 'bg-green-500 text-white'
                                         : 'bg-red-500 text-white'
                                         }`}>
                                         {event.status}
                                     </span>
                                 </div>
-                                <div className="absolute bottom-4 left-4 right-4">
-                                    <div className="flex items-center gap-2 text-white">
-                                        <Trophy className="w-5 h-5" />
-                                        <span className="text-sm font-semibold">{event.sport}</span>
-                                    </div>
-                                </div>
                             </div>
-                            <div className="p-6">
-                                <h3 className="font-bold text-xl mb-2 text-gray-900 group-hover:text-primary-600 transition-colors">
+
+                            {/* Content Section */}
+                            <div className="p-5">
+                                {/* Title - Centered */}
+                                <h3 className="text-center font-bold text-lg mb-3 text-gray-900 group-hover:text-primary-600 transition-colors leading-tight">
                                     {event.title}
                                 </h3>
-                                <p className="text-sm text-gray-600 mb-4 line-clamp-2">
+
+                                {/* Description - Left Aligned */}
+                                <p className="text-left text-xs text-gray-600 mb-4 line-clamp-2 leading-relaxed">
                                     {event.description}
                                 </p>
-                                <div className="space-y-2 text-sm text-gray-600 mb-4">
-                                    <div className="flex items-center">
-                                        <Calendar className="w-4 h-4 mr-2 text-primary-600" />
-                                        {new Date(event.date).toLocaleDateString('en-US', {
-                                            weekday: 'short',
-                                            year: 'numeric',
-                                            month: 'short',
-                                            day: 'numeric'
-                                        })}
+
+                                {/* Metadata - Left Aligned with consistent spacing */}
+                                <div className="space-y-2.5 mb-4">
+                                    <div className="flex items-center text-[10px] text-gray-700">
+                                        <Calendar className="w-3.5 h-3.5 mr-2 text-primary-600 flex-shrink-0" />
+                                        <span className="leading-none whitespace-nowrap">
+                                            {new Date(event.date).toLocaleDateString('en-US', {
+                                                month: 'short',
+                                                day: 'numeric',
+                                                year: 'numeric'
+                                            })} at {event.time}
+                                        </span>
                                     </div>
-                                    <div className="flex items-center">
-                                        <MapPin className="w-4 h-4 mr-2 text-primary-600" />
-                                        {event.location}
+
+                                    <div className="flex items-center text-[10px] text-gray-700">
+                                        <MapPin className="w-3.5 h-3.5 mr-2 text-primary-600 flex-shrink-0" />
+                                        <span className="leading-none truncate">{event.location}</span>
                                     </div>
-                                    <div className="flex items-center">
-                                        <Users className="w-4 h-4 mr-2 text-primary-600" />
-                                        {event.participants}/{event.maxParticipants} registered
+
+                                    <div className="flex items-center text-[10px] text-gray-700">
+                                        <Users className="w-3.5 h-3.5 mr-2 text-primary-600 flex-shrink-0" />
+                                        <span className="leading-none">
+                                            {event.participants}/{event.maxParticipants} participants
+                                        </span>
                                     </div>
                                 </div>
 
-                                <div className="flex items-center justify-between pt-4 border-t border-gray-200">
-                                    {event.price > 0 ? (
-                                        <div>
-                                            <div className="text-xs text-gray-500">Entry Fee</div>
-                                            <div className="text-2xl font-bold text-primary-600">
-                                                ${event.price}
+                                {/* Footer - Price and Button */}
+                                <div className="flex items-end pt-4 border-t border-gray-100">
+                                    <div className="flex-1">
+                                        {event.price > 0 ? (
+                                            <div className="flex flex-col">
+                                                <span className="text-xs text-gray-500 mb-0.5">Entry Fee</span>
+                                                <span className="text-lg font-bold text-primary-600">
+                                                    Rs {event.price}
+                                                </span>
                                             </div>
-                                        </div>
-                                    ) : (
-                                        <div className="text-lg font-bold text-green-600">
-                                            FREE
-                                        </div>
-                                    )}
+                                        ) : (
+                                            <div className="flex flex-col">
+                                                <span className="text-xs text-gray-500 mb-0.5">Entry Fee</span>
+                                                <span className="text-lg font-bold text-green-600">
+                                                    FREE
+                                                </span>
+                                            </div>
+                                        )}
+                                    </div>
                                     <Button
                                         variant="primary"
                                         size="sm"
-                                        className="group-hover:shadow-lg"
+                                        className="text-[10px] px-3 py-1.5 group-hover:shadow-md transition-shadow ml-auto"
                                     >
                                         View Details
                                     </Button>

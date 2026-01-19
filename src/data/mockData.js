@@ -312,7 +312,7 @@ export const products = [
 export const players = [
     {
         id: 1,
-        name: 'John Doe',
+        name: 'Muhammad Sameer Khan',
         avatar: 'https://i.pravatar.cc/150?img=12',
         sports: ['Tennis', 'Badminton'],
         skillLevel: 'Intermediate',
@@ -322,7 +322,7 @@ export const players = [
     },
     {
         id: 2,
-        name: 'Sarah Smith',
+        name: 'Alina Khan',
         avatar: 'https://i.pravatar.cc/150?img=5',
         sports: ['Basketball', 'Volleyball'],
         skillLevel: 'Advanced',

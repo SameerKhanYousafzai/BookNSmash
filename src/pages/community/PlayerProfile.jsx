@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Edit, Upload, Trophy, Target, TrendingUp, Calendar, User } from 'lucide-react';
+import { ArrowLeft, Edit, Upload, Trophy, Target, TrendingUp, Calendar, User, X } from 'lucide-react';
 import Button from '../../components/common/Button';
 import Card from '../../components/common/Card';
 import Modal from '../../components/common/Modal';
@@ -12,6 +12,9 @@ export default function PlayerProfile() {
     const navigate = useNavigate();
     const [isEditing, setIsEditing] = useState(false);
     const [showPhotoModal, setShowPhotoModal] = useState(false);
+    const [previewImage, setPreviewImage] = useState(null);
+    const [isDragging, setIsDragging] = useState(false);
+    const fileInputRef = useRef(null);
 
     // Mock player data - in real app, would fetch from API
     const player = id === 'new' ? null : players.find(p => p.id === parseInt(id));
@@ -76,9 +79,82 @@ export default function PlayerProfile() {
     };
 
     const handlePhotoUpload = () => {
-        // Mock photo upload
-        alert('Photo upload functionality would be implemented here');
+        if (previewImage) {
+            setFormData({ ...formData, avatar: previewImage });
+            setShowPhotoModal(false);
+            setPreviewImage(null);
+        }
+    };
+
+    const handleFileSelect = (file) => {
+        if (file && file.type.startsWith('image/')) {
+            if (file.size > 10 * 1024 * 1024) { // 10MB limit
+                alert('File size must be less than 10MB');
+                return;
+            }
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setPreviewImage(reader.result);
+            };
+            reader.readAsDataURL(file);
+        } else {
+            alert('Please select a valid image file (PNG, JPG, GIF, etc.)');
+        }
+    };
+
+    const handleFileInputChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            handleFileSelect(file);
+        }
+    };
+
+    const handleDragOver = (e) => {
+        e.preventDefault();
+        setIsDragging(true);
+    };
+
+    const handleDragLeave = (e) => {
+        e.preventDefault();
+        setIsDragging(false);
+    };
+
+    const handleDrop = (e) => {
+        e.preventDefault();
+        setIsDragging(false);
+        const file = e.dataTransfer.files[0];
+        if (file) {
+            handleFileSelect(file);
+        }
+    };
+
+    const handlePaste = (e) => {
+        const items = e.clipboardData?.items;
+        if (items) {
+            for (let i = 0; i < items.length; i++) {
+                if (items[i].type.indexOf('image') !== -1) {
+                    const file = items[i].getAsFile();
+                    handleFileSelect(file);
+                    break;
+                }
+            }
+        }
+    };
+
+    // Add paste event listener when modal is open
+    useEffect(() => {
+        if (showPhotoModal) {
+            window.addEventListener('paste', handlePaste);
+            return () => {
+                window.removeEventListener('paste', handlePaste);
+            };
+        }
+    }, [showPhotoModal]);
+
+    const handleModalClose = () => {
         setShowPhotoModal(false);
+        setPreviewImage(null);
+        setIsDragging(false);
     };
 
     if (!player && id !== 'new') {
@@ -306,8 +382,8 @@ export default function PlayerProfile() {
                                                 type="button"
                                                 onClick={() => toggleSport(sport.name)}
                                                 className={`p-3 rounded-lg border-2 transition-all ${formData.sports.includes(sport.name)
-                                                        ? 'border-primary-500 bg-primary-50 text-primary-700'
-                                                        : 'border-gray-200 hover:border-gray-300'
+                                                    ? 'border-primary-500 bg-primary-50 text-primary-700'
+                                                    : 'border-gray-200 hover:border-gray-300'
                                                     }`}
                                             >
                                                 <div className="text-2xl mb-1">{sport.icon}</div>
@@ -369,20 +445,56 @@ export default function PlayerProfile() {
             {showPhotoModal && (
                 <Modal
                     isOpen={showPhotoModal}
-                    onClose={() => setShowPhotoModal(false)}
+                    onClose={handleModalClose}
                     title="Upload Profile Photo"
                 >
                     <div className="space-y-4">
-                        <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
-                            <Upload className="w-12 h-12 mx-auto text-gray-400 mb-4" />
-                            <p className="text-gray-600 mb-2">Click to upload or drag and drop</p>
-                            <p className="text-sm text-gray-500">PNG, JPG up to 10MB</p>
-                        </div>
+                        <input
+                            ref={fileInputRef}
+                            type="file"
+                            accept="image/*"
+                            onChange={handleFileInputChange}
+                            className="hidden"
+                        />
+
+                        {previewImage ? (
+                            <div className="relative">
+                                <img
+                                    src={previewImage}
+                                    alt="Preview"
+                                    className="w-full h-64 object-cover rounded-lg"
+                                />
+                                <button
+                                    onClick={() => setPreviewImage(null)}
+                                    className="absolute top-2 right-2 w-8 h-8 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors shadow-lg"
+                                >
+                                    <X className="w-5 h-5" />
+                                </button>
+                            </div>
+                        ) : (
+                            <div
+                                onClick={() => fileInputRef.current?.click()}
+                                onDragOver={handleDragOver}
+                                onDragLeave={handleDragLeave}
+                                onDrop={handleDrop}
+                                className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-all ${isDragging
+                                        ? 'border-primary-500 bg-primary-50'
+                                        : 'border-gray-300 hover:border-primary-400 hover:bg-gray-50'
+                                    }`}
+                            >
+                                <Upload className="w-12 h-12 mx-auto text-gray-400 mb-4" />
+                                <p className="text-gray-600 mb-2 font-semibold">
+                                    Click to upload, drag and drop, or paste (Ctrl+V)
+                                </p>
+                                <p className="text-sm text-gray-500">PNG, JPG, GIF up to 10MB</p>
+                            </div>
+                        )}
+
                         <div className="flex gap-3">
                             <Button
                                 variant="ghost"
                                 className="flex-1"
-                                onClick={() => setShowPhotoModal(false)}
+                                onClick={handleModalClose}
                             >
                                 Cancel
                             </Button>
@@ -390,6 +502,7 @@ export default function PlayerProfile() {
                                 variant="primary"
                                 className="flex-1"
                                 onClick={handlePhotoUpload}
+                                disabled={!previewImage}
                             >
                                 Upload
                             </Button>

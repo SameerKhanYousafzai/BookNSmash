@@ -31,7 +31,6 @@ export default function Home() {
                             <Link to="/matches">
                                 <Button variant="secondary" size="lg" className="shadow-xl hover:shadow-2xl">
                                     Find a Match
-                                    <ArrowRight className="w-5 h-5 ml-2" />
                                 </Button>
                             </Link>
                             <Link to="/events">
@@ -95,33 +94,30 @@ export default function Home() {
 
             {/* Upcoming Events */}
             <section className="container-custom">
-                <div className="flex items-center justify-between mb-8">
-                    <div>
-                        <h2 className="text-3xl font-display font-bold text-gray-900 mb-2">
-                            {selectedSport ? `${selectedSport} Events` : 'Upcoming Events'}
-                        </h2>
-                        <p className="text-gray-600">Join exciting tournaments and competitions</p>
-                    </div>
-                    <Link to="/events">
-                        <Button variant="ghost">
-                            View All
-                            <ArrowRight className="w-4 h-4 ml-2" />
-                        </Button>
-                    </Link>
+                <div className="text-center mb-12">
+                    <h2 className="text-3xl sm:text-4xl font-display font-bold text-gray-900 mb-4">
+                        {selectedSport ? `${selectedSport} Events` : 'Upcoming Events'}
+                    </h2>
+                    <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+                        Join exciting tournaments and competitions
+                    </p>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                     {filteredEvents.map((event) => (
                         <Link key={event.id} to={`/events/${event.id}`}>
-                            <Card className="group cursor-pointer h-full hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1">
-                                <div className="relative h-48 rounded-t-xl overflow-hidden">
+                            <Card className="group cursor-pointer h-full hover:shadow-xl transition-all duration-300 overflow-hidden">
+                                {/* Image Section */}
+                                <div className="relative h-48 overflow-hidden">
                                     <img
                                         src={event.image}
                                         alt={event.title}
-                                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                                     />
-                                    <div className="absolute top-4 right-4">
-                                        <span className={`px-3 py-1 rounded-full text-xs font-semibold ${event.status === 'Open'
+
+                                    {/* Status Badge */}
+                                    <div className="absolute top-3 right-3">
+                                        <span className={`px-3 py-1 rounded-full text-xs font-bold shadow-lg ${event.status === 'Open'
                                             ? 'bg-green-500 text-white'
                                             : 'bg-red-500 text-white'
                                             }`}>
@@ -129,33 +125,52 @@ export default function Home() {
                                         </span>
                                     </div>
                                 </div>
-                                <div className="p-6">
-                                    <h3 className="font-bold text-lg mb-2 text-gray-900 group-hover:text-primary-600 transition-colors">
+
+                                {/* Content Section */}
+                                <div className="p-5">
+                                    {/* Title - Centered */}
+                                    <h3 className="text-center font-bold text-lg mb-3 text-gray-900 group-hover:text-primary-600 transition-colors leading-tight">
                                         {event.title}
                                     </h3>
-                                    <p className="text-sm text-gray-600 mb-4 line-clamp-2">
+
+                                    {/* Description - Left Aligned */}
+                                    <p className="text-left text-xs text-gray-600 mb-4 line-clamp-2 leading-relaxed">
                                         {event.description}
                                     </p>
-                                    <div className="space-y-2 text-sm text-gray-600">
-                                        <div className="flex items-center">
-                                            <Calendar className="w-4 h-4 mr-2 text-primary-600" />
-                                            {new Date(event.date).toLocaleDateString()} at {event.time}
+
+                                    {/* Metadata - Left Aligned with consistent spacing */}
+                                    <div className="space-y-2.5 mb-4">
+                                        <div className="flex items-center text-[10px] text-gray-700">
+                                            <Calendar className="w-3.5 h-3.5 mr-2 text-primary-600 flex-shrink-0" />
+                                            <span className="leading-none whitespace-nowrap">
+                                                {new Date(event.date).toLocaleDateString('en-US', {
+                                                    month: 'short',
+                                                    day: 'numeric',
+                                                    year: 'numeric'
+                                                })} at {event.time}
+                                            </span>
                                         </div>
-                                        <div className="flex items-center">
-                                            <MapPin className="w-4 h-4 mr-2 text-primary-600" />
-                                            {event.location}
+
+                                        <div className="flex items-center text-[10px] text-gray-700">
+                                            <MapPin className="w-3.5 h-3.5 mr-2 text-primary-600 flex-shrink-0" />
+                                            <span className="leading-none truncate">{event.location}</span>
                                         </div>
-                                        <div className="flex items-center">
-                                            <Users className="w-4 h-4 mr-2 text-primary-600" />
-                                            {event.participants}/{event.maxParticipants} participants
+
+                                        <div className="flex items-center text-[10px] text-gray-700">
+                                            <Users className="w-3.5 h-3.5 mr-2 text-primary-600 flex-shrink-0" />
+                                            <span className="leading-none">
+                                                {event.participants}/{event.maxParticipants} participants
+                                            </span>
                                         </div>
                                     </div>
+
+                                    {/* Price - Only show if paid */}
                                     {event.price > 0 && (
-                                        <div className="mt-4 pt-4 border-t border-gray-200">
+                                        <div className="pt-4 border-t border-gray-100">
                                             <div className="flex items-center justify-between">
-                                                <span className="text-sm text-gray-600">Entry Fee</span>
-                                                <span className="text-xl font-bold text-primary-600">
-                                                    ${event.price}
+                                                <span className="text-xs text-gray-500">Entry Fee</span>
+                                                <span className="text-lg font-bold text-primary-600">
+                                                    Rs {event.price}
                                                 </span>
                                             </div>
                                         </div>
@@ -164,6 +179,14 @@ export default function Home() {
                             </Card>
                         </Link>
                     ))}
+                </div>
+
+                <div className="text-center mt-12">
+                    <Link to="/events">
+                        <Button variant="primary" size="lg" className="px-8 shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-1">
+                            View All
+                        </Button>
+                    </Link>
                 </div>
             </section>
 
@@ -183,7 +206,6 @@ export default function Home() {
                             <Link to="/register">
                                 <Button variant="secondary" size="lg" className="shadow-xl">
                                     Create Account
-                                    <ArrowRight className="w-5 h-5 ml-2" />
                                 </Button>
                             </Link>
                             <Link to="/venues">
