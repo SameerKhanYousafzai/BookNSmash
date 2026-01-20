@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
+import { DataProvider } from './context/DataContext';
 import Layout from './components/layout/Layout';
 import AdminLayout from './components/layout/AdminLayout';
 import ProtectedRoute from './components/routes/ProtectedRoute';
@@ -33,6 +34,7 @@ import ContactUs from './pages/ContactUs';
 import WeeklyDashboard from './pages/admin/WeeklyDashboard';
 import MonthlyDashboard from './pages/admin/MonthlyDashboard';
 import YearlyDashboard from './pages/admin/YearlyDashboard';
+import PlayerManager from './pages/admin/PlayerManager';
 
 import './App.css';
 
@@ -48,68 +50,71 @@ import './App.css';
 function App() {
   return (
     <Router>
-      <AuthProvider>
-        <Routes>
-          {/* Public Auth Routes - No Layout */}
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/admin/login" element={<AdminLogin />} />
-          <Route path="/forgot-password" element={<ForgotPassword />} />
-          <Route path="/unauthorized" element={<Unauthorized />} />
+      <DataProvider>
+        <AuthProvider>
+          <Routes>
+            {/* Public Auth Routes - No Layout */}
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            <Route path="/admin/login" element={<AdminLogin />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/unauthorized" element={<Unauthorized />} />
 
-          {/* Protected User Routes - With Main Layout */}
-          <Route element={
-            <ProtectedRoute>
-              <Layout />
-            </ProtectedRoute>
-          }>
-            <Route path="/" element={<Home />} />
-            <Route path="/profile" element={<UserProfile />} />
+            {/* Protected User Routes - With Main Layout */}
+            <Route element={
+              <ProtectedRoute>
+                <Layout />
+              </ProtectedRoute>
+            }>
+              <Route path="/" element={<Home />} />
+              <Route path="/profile" element={<UserProfile />} />
 
-            {/* Matches */}
-            <Route path="/matches" element={<Matches />} />
-            <Route path="/matches/create" element={<CreateMatch />} />
+              {/* Matches */}
+              <Route path="/matches" element={<Matches />} />
+              <Route path="/matches/create" element={<CreateMatch />} />
 
-            {/* Events */}
-            <Route path="/events" element={<Events />} />
-            <Route path="/events/:id" element={<EventDetail />} />
+              {/* Events */}
+              <Route path="/events" element={<Events />} />
+              <Route path="/events/:id" element={<EventDetail />} />
 
-            {/* Venues */}
-            <Route path="/venues" element={<Venues />} />
-            <Route path="/venues/:id" element={<VenueDetail />} />
+              {/* Venues */}
+              <Route path="/venues" element={<Venues />} />
+              <Route path="/venues/:id" element={<VenueDetail />} />
 
-            {/* Community */}
-            <Route path="/community" element={<Community />} />
-            <Route path="/community/player/:id" element={<PlayerProfile />} />
-            <Route path="/community/team/:id" element={<TeamProfile />} />
+              {/* Community */}
+              <Route path="/community" element={<Community />} />
+              <Route path="/community/player/:id" element={<PlayerProfile />} />
+              <Route path="/community/team/:id" element={<TeamProfile />} />
 
-            {/* Shop */}
-            <Route path="/shop" element={<Shop />} />
-            <Route path="/shop/product/:id" element={<ProductDetail />} />
+              {/* Shop */}
+              <Route path="/shop" element={<Shop />} />
+              <Route path="/shop/product/:id" element={<ProductDetail />} />
 
-            {/* Sponsorship */}
-            <Route path="/sponsorship" element={<Sponsorship />} />
+              {/* Sponsorship */}
+              <Route path="/sponsorship" element={<Sponsorship />} />
 
-            {/* Contact Us */}
-            <Route path="/contact" element={<ContactUs />} />
-          </Route>
+              {/* Contact Us */}
+              <Route path="/contact" element={<ContactUs />} />
+            </Route>
 
-          {/* Admin Routes - With Admin Layout */}
-          <Route path="/admin" element={
-            <AdminRoute>
-              <AdminLayout />
-            </AdminRoute>
-          }>
-            <Route index element={<Navigate to="/admin/dashboard/weekly" replace />} />
-            <Route path="dashboard/weekly" element={<WeeklyDashboard />} />
-            <Route path="dashboard/monthly" element={<MonthlyDashboard />} />
-            <Route path="dashboard/yearly" element={<YearlyDashboard />} />
-          </Route>
+            {/* Admin Routes - With Admin Layout */}
+            <Route path="/admin" element={
+              <AdminRoute>
+                <AdminLayout />
+              </AdminRoute>
+            }>
+              <Route index element={<Navigate to="/admin/dashboard/weekly" replace />} />
+              <Route path="dashboard/weekly" element={<WeeklyDashboard />} />
+              <Route path="dashboard/monthly" element={<MonthlyDashboard />} />
+              <Route path="dashboard/yearly" element={<YearlyDashboard />} />
+              <Route path="players" element={<PlayerManager />} />
+            </Route>
 
-          {/* Catch all - redirect to login */}
-          <Route path="*" element={<Navigate to="/login" replace />} />
-        </Routes>
-      </AuthProvider>
+            {/* Catch all - redirect to login */}
+            <Route path="*" element={<Navigate to="/login" replace />} />
+          </Routes>
+        </AuthProvider>
+      </DataProvider>
     </Router>
   );
 }

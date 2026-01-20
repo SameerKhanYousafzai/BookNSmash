@@ -1,10 +1,11 @@
 import { Link } from 'react-router-dom';
-import { Users, Trophy, User, Plus } from 'lucide-react';
-import Button from '../../components/common/Button';
+import { Users, Trophy } from 'lucide-react';
 import Card from '../../components/common/Card';
-import { players, teams } from '../../data/mockData';
+import { teams } from '../../data/mockData';
+import { useData } from '../../context/DataContext';
 
 export default function Community() {
+    const { players } = useData();
     return (
         <div className="container-custom py-8 space-y-12">
             {/* Header */}
@@ -24,12 +25,6 @@ export default function Community() {
                         <h2 className="text-2xl font-bold text-gray-900 mb-2">Players</h2>
                         <p className="text-gray-600">Find playing partners and connect with athletes</p>
                     </div>
-                    <Link to="/community/player/new">
-                        <Button variant="primary">
-                            <Plus className="w-4 h-4 mr-2" />
-                            Create Profile
-                        </Button>
-                    </Link>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
@@ -85,12 +80,6 @@ export default function Community() {
                         <h2 className="text-2xl font-bold text-gray-900 mb-2">Teams</h2>
                         <p className="text-gray-600">Join or create competitive teams</p>
                     </div>
-                    <Link to="/community/team/new">
-                        <Button variant="primary">
-                            <Plus className="w-4 h-4 mr-2" />
-                            Create Team
-                        </Button>
-                    </Link>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -149,23 +138,9 @@ export default function Community() {
                 <h2 className="text-3xl font-display font-bold mb-4">
                     Join Our Community
                 </h2>
-                <p className="text-xl text-primary-100 mb-8 max-w-2xl mx-auto">
-                    Create your profile, find teammates, and start competing today
+                <p className="text-xl text-primary-100 max-w-2xl mx-auto">
+                    Browse player profiles and teams to find your perfect match
                 </p>
-                <div className="flex flex-wrap gap-4 justify-center">
-                    <Link to="/community/player/new">
-                        <Button variant="secondary" size="lg">
-                            <User className="w-5 h-5 mr-2" />
-                            Create Player Profile
-                        </Button>
-                    </Link>
-                    <Link to="/community/team/new">
-                        <Button variant="outline" size="lg" className="bg-white/10 backdrop-blur-sm border-white/30 text-white hover:bg-white/20">
-                            <Trophy className="w-5 h-5 mr-2" />
-                            Create Team
-                        </Button>
-                    </Link>
-                </div>
             </section>
         </div>
     );

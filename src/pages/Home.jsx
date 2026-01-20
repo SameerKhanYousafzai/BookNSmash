@@ -166,13 +166,11 @@ export default function Home() {
 
                                     {/* Price - Only show if paid */}
                                     {event.price > 0 && (
-                                        <div className="pt-4 border-t border-gray-100">
-                                            <div className="flex items-center justify-between">
-                                                <span className="text-xs text-gray-500">Entry Fee</span>
-                                                <span className="text-lg font-bold text-primary-600">
-                                                    Rs {event.price}
-                                                </span>
-                                            </div>
+                                        <div className="pt-4 border-t border-gray-100 text-center">
+                                            <span className="text-xs text-gray-500 mr-2">Entry Fee</span>
+                                            <span className="text-lg font-bold text-primary-600">
+                                                Rs{event.price}
+                                            </span>
                                         </div>
                                     )}
                                 </div>

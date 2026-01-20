@@ -22,6 +22,7 @@ export default function AdminLayout() {
         { path: '/admin/dashboard/weekly', label: 'Weekly Dashboard', icon: Calendar },
         { path: '/admin/dashboard/monthly', label: 'Monthly Dashboard', icon: TrendingUp },
         { path: '/admin/dashboard/yearly', label: 'Yearly Dashboard', icon: LayoutDashboard },
+        { path: '/admin/players', label: 'Player Manager', icon: Users },
     ];
 
     return (

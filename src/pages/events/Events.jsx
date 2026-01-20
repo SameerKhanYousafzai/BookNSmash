@@ -131,6 +131,7 @@ export default function Events() {
                                     {event.title}
                                 </h3>
 
+
                                 {/* Description - Left Aligned */}
                                 <p className="text-left text-xs text-gray-600 mb-4 line-clamp-2 leading-relaxed">
                                     {event.description}
@@ -162,29 +163,26 @@ export default function Events() {
                                     </div>
                                 </div>
 
-                                {/* Footer - Price and Button */}
-                                <div className="flex items-end pt-4 border-t border-gray-100">
-                                    <div className="flex-1">
-                                        {event.price > 0 ? (
-                                            <div className="flex flex-col">
-                                                <span className="text-xs text-gray-500 mb-0.5">Entry Fee</span>
-                                                <span className="text-lg font-bold text-primary-600">
-                                                    Rs {event.price}
-                                                </span>
-                                            </div>
-                                        ) : (
-                                            <div className="flex flex-col">
-                                                <span className="text-xs text-gray-500 mb-0.5">Entry Fee</span>
-                                                <span className="text-lg font-bold text-green-600">
-                                                    FREE
-                                                </span>
-                                            </div>
-                                        )}
-                                    </div>
+                                {/* Price - Centered above separator */}
+                                <div className="text-center mb-4">
+                                    <span className="text-xs text-gray-500 mr-2">Entry Fee</span>
+                                    {event.price > 0 ? (
+                                        <span className="text-lg font-bold text-primary-600">
+                                            Rs{event.price}
+                                        </span>
+                                    ) : (
+                                        <span className="text-lg font-bold text-green-600">
+                                            FREE
+                                        </span>
+                                    )}
+                                </div>
+
+                                {/* Footer - Centered Button */}
+                                <div className="flex justify-center border-t border-gray-100 pt-4">
                                     <Button
                                         variant="primary"
                                         size="sm"
-                                        className="text-[10px] px-3 py-1.5 group-hover:shadow-md transition-shadow ml-auto"
+                                        className="text-[10px] px-6 py-1.5 group-hover:shadow-md transition-shadow"
                                     >
                                         View Details
                                     </Button>
@@ -195,13 +193,15 @@ export default function Events() {
                 ))}
             </div>
 
-            {filteredEvents.length === 0 && (
-                <div className="text-center py-16">
-                    <Trophy className="w-16 h-16 mx-auto text-gray-300 mb-4" />
-                    <h3 className="text-xl font-semibold text-gray-900 mb-2">No events found</h3>
-                    <p className="text-gray-600">Try adjusting your filters to see more events</p>
-                </div>
-            )}
-        </div>
+            {
+                filteredEvents.length === 0 && (
+                    <div className="text-center py-16">
+                        <Trophy className="w-16 h-16 mx-auto text-gray-300 mb-4" />
+                        <h3 className="text-xl font-semibold text-gray-900 mb-2">No events found</h3>
+                        <p className="text-gray-600">Try adjusting your filters to see more events</p>
+                    </div>
+                )
+            }
+        </div >
     );
 }

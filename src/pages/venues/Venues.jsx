@@ -120,7 +120,7 @@ export default function Venues() {
                                 <h3 className="font-bold text-xl mb-2 text-gray-900 group-hover:text-primary-600 transition-colors">
                                     {venue.name}
                                 </h3>
-                                <div className="flex items-start gap-2 text-sm text-gray-600 mb-4">
+                                <div className="flex items-start gap-2 text-sm text-gray-600 mb-4 text-left">
                                     <MapPin className="w-4 h-4 flex-shrink-0 mt-0.5 text-primary-600" />
                                     <span>{venue.location}</span>
                                 </div>
@@ -146,12 +146,12 @@ export default function Venues() {
                                     {venue.description}
                                 </p>
 
-                                <div className="flex items-center justify-between pt-4 border-t border-gray-200">
+                                <div className="flex items-end justify-between pt-4 border-t border-gray-200">
                                     <div>
-                                        <div className="text-xs text-gray-500">Price Range</div>
-                                        <div className="font-semibold text-gray-900">{venue.priceRange}</div>
+                                        <div className="text-[10px] text-gray-500 mb-0.5">Price Range</div>
+                                        <div className="text-sm font-semibold text-gray-900">{venue.priceRange}</div>
                                     </div>
-                                    <div className="text-xs text-gray-500">
+                                    <div className="text-[10px] text-gray-500">
                                         {venue.reviews} reviews
                                     </div>
                                 </div>

@@ -77,10 +77,10 @@ const ContactUs = () => {
                                         Mon-Fri from 9am to 6pm
                                     </p>
                                     <a
-                                        href="tel:+923001234567"
+                                        href="tel:+923042008421"
                                         className="text-primary-600 hover:text-primary-700 font-medium text-sm"
                                     >
-                                        +92 300 1234567
+                                        +92 3042008421
                                     </a>
                                 </div>
                             </div>
@@ -98,8 +98,8 @@ const ContactUs = () => {
                                         Come say hello at our office
                                     </p>
                                     <p className="text-sm text-gray-700">
-                                        Central Sports Complex<br />
-                                        Islamabad, Pakistan
+                                        Swenta Solutions<br />
+                                        Karachi, Pakistan
                                     </p>
                                 </div>
                             </div>
@@ -141,7 +141,7 @@ const ContactUs = () => {
                                             onChange={handleChange}
                                             required
                                             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
-                                            placeholder="John Doe"
+                                            placeholder="Muhammad Sameer Khan"
                                         />
                                     </div>
 
@@ -161,7 +161,7 @@ const ContactUs = () => {
                                             onChange={handleChange}
                                             required
                                             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
-                                            placeholder="john@example.com"
+                                            placeholder="sameer@example.com"
                                         />
                                     </div>
 

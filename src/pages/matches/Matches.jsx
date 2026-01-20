@@ -1,14 +1,16 @@
 import { useState } from 'react';
 import { FaMoneyBillWave } from "react-icons/fa";
 import { Link } from 'react-router-dom';
-import { Filter, MapPin, Calendar, Users, DollarSign, Plus, Clock } from 'lucide-react';
+import { Filter, MapPin, Calendar, Users, DollarSign, Clock } from 'lucide-react';
 import Button from '../../components/common/Button';
 import Card from '../../components/common/Card';
 import Modal from '../../components/common/Modal';
-import { matches, sportsCategories } from '../../data/mockData';
+import { sportsCategories } from '../../data/mockData';
+import { useData } from '../../context/DataContext';
 
 
 export default function Matches() {
+    const { matches } = useData();
     const [filters, setFilters] = useState({
         sport: '',
         date: '',
@@ -46,12 +48,6 @@ export default function Matches() {
                     </h1>
                     <p className="text-gray-600">Join pickup games and find playing partners</p>
                 </div>
-                <Link to="/matches/create">
-                    <Button variant="primary" size="lg">
-                        <Plus className="w-5 h-5 mr-2" />
-                        Create Match
-                    </Button>
-                </Link>
             </div>
 
             {/* Filters */}

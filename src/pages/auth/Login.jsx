@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Mail, Lock, AlertCircle, CheckCircle } from 'lucide-react';
+import { Mail, Lock, AlertCircle, CheckCircle, Eye, EyeOff } from 'lucide-react';
 import FormInput from '../../components/common/FormInput';
 import Button from '../../components/common/Button';
 import { useAuth } from '../../context/AuthContext';
@@ -13,6 +13,7 @@ export default function Login() {
     });
     const [errors, setErrors] = useState({});
     const [message, setMessage] = useState({ type: '', text: '' });
+    const [showPassword, setShowPassword] = useState(false);
 
     const validateForm = () => {
         const newErrors = {};
@@ -105,16 +106,32 @@ export default function Login() {
                         </div>
 
                         <div>
-                            <FormInput
-                                label="Password"
-                                type="password"
-                                name="password"
-                                value={formData.password}
-                                onChange={handleChange}
-                                error={errors.password}
-                                placeholder="••••••••"
-                                required
-                            />
+                            <div className="w-full">
+                                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                    Password <span className="text-red-500 ml-1">*</span>
+                                </label>
+                                <div className="relative">
+                                    <input
+                                        type={showPassword ? 'text' : 'password'}
+                                        name="password"
+                                        value={formData.password}
+                                        onChange={handleChange}
+                                        placeholder="••••••••"
+                                        className={`input-field pr-10 ${errors.password ? 'input-error' : ''}`}
+                                        required
+                                    />
+                                    <button
+                                        type="button"
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                                        onClick={() => setShowPassword(!showPassword)}
+                                    >
+                                        {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                                    </button>
+                                </div>
+                                {errors.password && (
+                                    <p className="mt-1 text-sm text-red-600">{errors.password}</p>
+                                )}
+                            </div>
                         </div>
 
                         <div className="flex items-center justify-between">
