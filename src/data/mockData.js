@@ -76,7 +76,7 @@ export const matches = [
         time: '07:00 AM',
         venue: 'Jouhar Sports Complex',
         venueId: 1,
-        organizer: 'Uzair Bhai',
+        organizer: 'Uzair Memon',
         skillLevel: 'Intermediate',
         currentPlayers: 3,
         maxPlayers: 4,

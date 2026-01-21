@@ -1,6 +1,6 @@
 import React from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, LogOut, Calendar, TrendingUp, Users } from 'lucide-react';
+import { LayoutDashboard, LogOut, Calendar, TrendingUp, Users, CalendarDays, MapPin } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import Button from '../common/Button';
 
@@ -23,6 +23,8 @@ export default function AdminLayout() {
         { path: '/admin/dashboard/monthly', label: 'Monthly Dashboard', icon: TrendingUp },
         { path: '/admin/dashboard/yearly', label: 'Yearly Dashboard', icon: LayoutDashboard },
         { path: '/admin/players', label: 'Player Manager', icon: Users },
+        { path: '/admin/events', label: 'Event Manager', icon: CalendarDays },
+        { path: '/admin/venues', label: 'Venue Manager', icon: MapPin },
     ];
 
     return (

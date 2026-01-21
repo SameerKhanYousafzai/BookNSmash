@@ -1,4 +1,4 @@
-import { createContext, useContext, useReducer, useEffect } from 'react';
+import { createContext, useContext, useReducer, useEffect, useState } from 'react';
 import {
     venues as initialVenues,
     upcomingEvents as initialEvents,
@@ -106,6 +106,7 @@ const initialState = {
 
 export const DataProvider = ({ children }) => {
     const [state, dispatch] = useReducer(dataReducer, initialState);
+    const [isInitialized, setIsInitialized] = useState(false);
 
     // Initialize from localStorage or seed with initial data
     useEffect(() => {
@@ -120,12 +121,15 @@ export const DataProvider = ({ children }) => {
         } else {
             localStorage.setItem('booknsmash_data', JSON.stringify(initialState));
         }
+        setIsInitialized(true);
     }, []);
 
-    // Sync to localStorage on state change
+    // Sync to localStorage on state change (ONLY after initialization)
     useEffect(() => {
-        localStorage.setItem('booknsmash_data', JSON.stringify(state));
-    }, [state]);
+        if (isInitialized) {
+            localStorage.setItem('booknsmash_data', JSON.stringify(state));
+        }
+    }, [state, isInitialized]);
 
     // Listen for storage events (cross-tab sync)
     useEffect(() => {

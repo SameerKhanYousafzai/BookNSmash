@@ -3,16 +3,18 @@ import { Link } from 'react-router-dom';
 import { Filter, Calendar, MapPin, Users, DollarSign, Trophy } from 'lucide-react';
 import Button from '../../components/common/Button';
 import Card from '../../components/common/Card';
-import { upcomingEvents, sportsCategories } from '../../data/mockData';
+import { sportsCategories } from '../../data/mockData';
+import { useData } from '../../context/DataContext';
 
 export default function Events() {
+    const { events } = useData();
     const [filters, setFilters] = useState({
         sport: '',
         status: '',
         priceRange: 'all',
     });
 
-    const filteredEvents = upcomingEvents.filter(event => {
+    const filteredEvents = events.filter(event => {
         if (filters.sport && event.sport !== filters.sport) return false;
         if (filters.status && event.status !== filters.status) return false;
         if (filters.priceRange === 'free' && event.price > 0) return false;

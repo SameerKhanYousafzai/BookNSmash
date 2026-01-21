@@ -3,9 +3,11 @@ import { Link } from 'react-router-dom';
 import { MapPin, Star, Filter, Search } from 'lucide-react';
 import Button from '../../components/common/Button';
 import Card from '../../components/common/Card';
-import { venues, sportsCategories } from '../../data/mockData';
+import { sportsCategories } from '../../data/mockData';
+import { useData } from '../../context/DataContext';
 
 export default function Venues() {
+    const { venues } = useData();
     const [filters, setFilters] = useState({
         sport: '',
         search: '',

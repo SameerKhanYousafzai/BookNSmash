@@ -35,6 +35,8 @@ import WeeklyDashboard from './pages/admin/WeeklyDashboard';
 import MonthlyDashboard from './pages/admin/MonthlyDashboard';
 import YearlyDashboard from './pages/admin/YearlyDashboard';
 import PlayerManager from './pages/admin/PlayerManager';
+import EventManager from './pages/admin/EventManager';
+import VenueManager from './pages/admin/VenueManager';
 
 import './App.css';
 
@@ -108,6 +110,8 @@ function App() {
               <Route path="dashboard/monthly" element={<MonthlyDashboard />} />
               <Route path="dashboard/yearly" element={<YearlyDashboard />} />
               <Route path="players" element={<PlayerManager />} />
+              <Route path="events" element={<EventManager />} />
+              <Route path="venues" element={<VenueManager />} />
             </Route>
 
             {/* Catch all - redirect to login */}
