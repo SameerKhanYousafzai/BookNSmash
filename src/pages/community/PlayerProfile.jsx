@@ -331,7 +331,7 @@ export default function PlayerProfile() {
                                     value={formData.name}
                                     onChange={handleChange}
                                     error={errors.name}
-                                    placeholder="John Doe"
+                                    placeholder="Full Name"
                                     required
                                 />
 
@@ -478,8 +478,8 @@ export default function PlayerProfile() {
                                 onDragLeave={handleDragLeave}
                                 onDrop={handleDrop}
                                 className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-all ${isDragging
-                                        ? 'border-primary-500 bg-primary-50'
-                                        : 'border-gray-300 hover:border-primary-400 hover:bg-gray-50'
+                                    ? 'border-primary-500 bg-primary-50'
+                                    : 'border-gray-300 hover:border-primary-400 hover:bg-gray-50'
                                     }`}
                             >
                                 <Upload className="w-12 h-12 mx-auto text-gray-400 mb-4" />

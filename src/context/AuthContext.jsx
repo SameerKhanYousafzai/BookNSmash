@@ -29,16 +29,20 @@ export const AuthProvider = ({ children }) => {
 
     /**
      * User Login
-     * Mock authentication - in production, this would call an API
+     * Mock authentication - checks against localStorage database
      */
     const loginUser = (email, password) => {
         // Mock validation
         if (email && password) {
+            // Get users from DB
+            const usersDb = JSON.parse(localStorage.getItem('booknsmash_users_db') || '{}');
+            const storedUser = usersDb[email.toLowerCase()];
+
             const user = {
-                id: 1,
-                name: 'John Doe',
+                id: storedUser?.id || 1,
+                name: storedUser?.name || 'User',
                 email: email,
-                avatar: 'https://i.pravatar.cc/150?img=12',
+                avatar: storedUser?.avatar || 'https://i.pravatar.cc/150?img=12',
             };
 
             setIsAuthenticated(true);
@@ -57,7 +61,7 @@ export const AuthProvider = ({ children }) => {
 
     /**
      * User Registration
-     * Mock registration - in production, this would call an API
+     * Mock registration - saves to localStorage database
      */
     const registerUser = (name, email, password) => {
         // Mock validation
@@ -68,6 +72,11 @@ export const AuthProvider = ({ children }) => {
                 email: email,
                 avatar: 'https://i.pravatar.cc/150?img=12',
             };
+
+            // Save to users DB
+            const usersDb = JSON.parse(localStorage.getItem('booknsmash_users_db') || '{}');
+            usersDb[email.toLowerCase()] = user;
+            localStorage.setItem('booknsmash_users_db', JSON.stringify(usersDb));
 
             setIsAuthenticated(true);
             setUserRole('USER');

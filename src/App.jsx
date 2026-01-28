@@ -37,6 +37,7 @@ import YearlyDashboard from './pages/admin/YearlyDashboard';
 import PlayerManager from './pages/admin/PlayerManager';
 import EventManager from './pages/admin/EventManager';
 import VenueManager from './pages/admin/VenueManager';
+import TeamsManager from './pages/admin/TeamsManager';
 
 import './App.css';
 
@@ -112,6 +113,7 @@ function App() {
               <Route path="players" element={<PlayerManager />} />
               <Route path="events" element={<EventManager />} />
               <Route path="venues" element={<VenueManager />} />
+              <Route path="teams" element={<TeamsManager />} />
             </Route>
 
             {/* Catch all - redirect to login */}

@@ -2,7 +2,9 @@ import React from 'react';
 import { Trophy, Calendar, MapPin, Award, TrendingUp, Clock } from 'lucide-react';
 import Card from '../components/common/Card';
 import { useAuth } from '../context/AuthContext';
+import { useData } from '../context/DataContext';
 import { userMatchHistory } from '../data/authMockData';
+import Button from '../components/common/Button';
 
 /**
  * UserProfile Page
@@ -11,6 +13,77 @@ import { userMatchHistory } from '../data/authMockData';
  */
 export default function UserProfile() {
     const { currentUser } = useAuth();
+    const { teams, addTeam, updateTeam } = useData();
+
+    // Find the user's team
+    const myTeam = (teams || []).find(t => t.creatorUserId === currentUser?.id || t.createdBy === currentUser?.id);
+
+    const [isTeamFormOpen, setIsTeamFormOpen] = React.useState(false);
+    const [teamFormData, setTeamFormData] = React.useState({
+        name: '',
+        sport: '',
+        description: '',
+    });
+
+    const handleTeamFormChange = (e) => {
+        const { name, value } = e.target;
+        setTeamFormData(prev => ({ ...prev, [name]: value }));
+    };
+
+    const openEditModal = () => {
+        if (!myTeam) return;
+        setTeamFormData({
+            name: myTeam.name,
+            sport: myTeam.sport,
+            description: myTeam.description || '',
+        });
+        setIsTeamFormOpen(true);
+    };
+
+    const openCreateModal = () => {
+        setTeamFormData({ name: '', sport: '', description: '' });
+        setIsTeamFormOpen(true);
+    };
+
+    const handleSaveTeam = (e) => {
+        e.preventDefault();
+        if (!currentUser) return;
+
+        if (myTeam) {
+            // Update
+            const updatedTeam = { ...myTeam, ...teamFormData };
+            updateTeam(updatedTeam);
+
+            // Sync with booknsmash_teams
+            const allTeams = JSON.parse(localStorage.getItem('booknsmash_teams') || '[]');
+            const updatedBooknsmashTeams = allTeams.map(t => t.id === myTeam.id ? updatedTeam : t);
+            localStorage.setItem('booknsmash_teams', JSON.stringify(updatedBooknsmashTeams));
+        } else {
+            // Create
+            const newTeam = {
+                id: Date.now(),
+                ...teamFormData,
+                logo: `https://i.pravatar.cc/150?img=${Math.floor(Math.random() * 70)}`,
+                members: 1,
+                wins: 0,
+                losses: 0,
+                captain: currentUser.name,
+                creatorUserId: currentUser.id,
+                createdBy: currentUser.id,
+            };
+            addTeam(newTeam);
+
+            // Sync with booknsmash_teams
+            const allTeams = JSON.parse(localStorage.getItem('booknsmash_teams') || '[]');
+            localStorage.setItem('booknsmash_teams', JSON.stringify([...allTeams, newTeam]));
+
+            // Also update user_created_teams for Community page compatibility
+            const userTeams = JSON.parse(localStorage.getItem('user_created_teams') || '{}');
+            localStorage.setItem('user_created_teams', JSON.stringify({ ...userTeams, [currentUser.id]: newTeam.id }));
+        }
+
+        setIsTeamFormOpen(false);
+    };
 
     const completedMatches = userMatchHistory.filter(match => match.status === 'Completed');
     const upcomingMatches = userMatchHistory.filter(match => match.status === 'Upcoming');
@@ -84,6 +157,153 @@ export default function UserProfile() {
                     <p className="text-sm text-gray-600 mt-1">Win Rate</p>
                 </Card>
             </div>
+
+            {/* My Team Section */}
+            <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                    <h2 className="text-2xl font-bold text-gray-900 flex items-center">
+                        <Trophy className="w-6 h-6 mr-2 text-primary-600" />
+                        My Team
+                    </h2>
+                    {!myTeam && (
+                        <Button onClick={openCreateModal} variant="primary" size="sm">
+                            Create Team
+                        </Button>
+                    )}
+                </div>
+
+                {myTeam ? (
+                    <Card className="p-6 overflow-hidden">
+                        <div className="flex flex-col md:flex-row gap-6">
+                            <div className="w-full md:w-48 h-48 rounded-xl overflow-hidden ring-2 ring-gray-100">
+                                <img
+                                    src={myTeam.logo}
+                                    alt={myTeam.name}
+                                    className="w-full h-full object-cover"
+                                />
+                            </div>
+                            <div className="flex-1 space-y-4">
+                                <div>
+                                    <div className="flex items-center justify-between mb-2">
+                                        <h3 className="text-2xl font-bold text-gray-900">{myTeam.name}</h3>
+                                        <Button
+                                            onClick={openEditModal}
+                                            variant="outline"
+                                            size="sm"
+                                        >
+                                            Update Team
+                                        </Button>
+                                    </div>
+                                    <p className="text-primary-600 font-semibold">{myTeam.sport}</p>
+                                </div>
+
+                                <p className="text-gray-600 line-clamp-3">
+                                    {myTeam.description || "No description provided."}
+                                </p>
+
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 py-4 border-y border-gray-100">
+                                    <div className="text-center">
+                                        <div className="text-lg font-bold text-gray-900">{myTeam.members}</div>
+                                        <div className="text-xs text-gray-500 uppercase tracking-wider">Members</div>
+                                    </div>
+                                    <div className="text-center border-l border-gray-100">
+                                        <div className="text-lg font-bold text-green-600">{myTeam.wins}</div>
+                                        <div className="text-xs text-gray-500 uppercase tracking-wider">Wins</div>
+                                    </div>
+                                    <div className="text-center border-l border-gray-100">
+                                        <div className="text-lg font-bold text-red-600">{myTeam.losses}</div>
+                                        <div className="text-xs text-gray-500 uppercase tracking-wider">Losses</div>
+                                    </div>
+                                    <div className="text-center border-l border-gray-100">
+                                        <div className="text-lg font-bold text-gray-900">{myTeam.captain}</div>
+                                        <div className="text-xs text-gray-500 uppercase tracking-wider">Captain</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </Card>
+                ) : (
+                    <Card className="p-12 text-center bg-gray-50 border-dashed border-2 border-gray-200">
+                        <Trophy className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                        <h3 className="text-lg font-semibold text-gray-900 mb-2">No Team Found</h3>
+                        <p className="text-gray-600 mb-6">You haven't created or joined any team yet.</p>
+                        <Button onClick={openCreateModal} variant="primary">
+                            Create Your Team Now
+                        </Button>
+                    </Card>
+                )}
+            </div>
+
+            {/* Team Form Modal */}
+            {isTeamFormOpen && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <Card className="w-full max-w-lg p-6">
+                        <h2 className="text-2xl font-bold text-gray-900 mb-6">
+                            {myTeam ? 'Update Your Team' : 'Create Your Team'}
+                        </h2>
+
+                        <form onSubmit={handleSaveTeam} className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                    Team Name *
+                                </label>
+                                <input
+                                    type="text"
+                                    name="name"
+                                    value={teamFormData.name}
+                                    onChange={handleTeamFormChange}
+                                    required
+                                    className="w-full h-11 px-4 py-2 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all duration-200"
+                                    placeholder="Thunder Strikers"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                    Sport *
+                                </label>
+                                <input
+                                    type="text"
+                                    name="sport"
+                                    value={teamFormData.sport}
+                                    onChange={handleTeamFormChange}
+                                    required
+                                    className="w-full h-11 px-4 py-2 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all duration-200"
+                                    placeholder="Football"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                    Description
+                                </label>
+                                <textarea
+                                    name="description"
+                                    value={teamFormData.description}
+                                    onChange={handleTeamFormChange}
+                                    rows="3"
+                                    className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all duration-200 resize-none"
+                                    placeholder="Tell us about your team..."
+                                />
+                            </div>
+
+                            <div className="flex gap-3 pt-4">
+                                <Button type="submit" variant="primary" className="flex-1">
+                                    {myTeam ? 'Update Team' : 'Create Team'}
+                                </Button>
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    onClick={() => setIsTeamFormOpen(false)}
+                                    className="flex-1"
+                                >
+                                    Cancel
+                                </Button>
+                            </div>
+                        </form>
+                    </Card>
+                </div>
+            )}
 
             {/* Upcoming Matches */}
             {upcomingMatches.length > 0 && (

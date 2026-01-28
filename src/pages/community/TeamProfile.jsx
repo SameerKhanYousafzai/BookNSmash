@@ -281,7 +281,7 @@ export default function TeamProfile() {
                                     value={formData.captain}
                                     onChange={handleChange}
                                     error={errors.captain}
-                                    placeholder="John Doe"
+                                    placeholder="Full Name"
                                     required
                                 />
 

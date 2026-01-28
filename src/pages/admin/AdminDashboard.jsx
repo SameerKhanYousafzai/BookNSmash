@@ -17,7 +17,7 @@ export default function AdminDashboard() {
     ];
 
     const pendingRegistrations = [
-        { id: 1, event: 'Summer Tennis Championship', user: 'John Doe', date: '2025-01-10', status: 'pending' },
+        { id: 1, event: 'Summer Tennis Championship', user: 'Sameer Khan', date: '2025-01-10', status: 'pending' },
         { id: 2, event: 'Basketball League Finals', user: 'Sarah Smith', date: '2025-01-11', status: 'pending' },
         { id: 3, event: 'Badminton Doubles Tournament', user: 'Mike Johnson', date: '2025-01-12', status: 'pending' },
     ];
@@ -123,9 +123,9 @@ export default function AdminDashboard() {
                         {recentActivity.map((activity, idx) => (
                             <div key={idx} className="flex items-start gap-3 pb-4 border-b border-gray-100 last:border-0">
                                 <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${activity.type === 'user' ? 'bg-blue-100' :
-                                        activity.type === 'event' ? 'bg-green-100' :
-                                            activity.type === 'payment' ? 'bg-purple-100' :
-                                                'bg-orange-100'
+                                    activity.type === 'event' ? 'bg-green-100' :
+                                        activity.type === 'payment' ? 'bg-purple-100' :
+                                            'bg-orange-100'
                                     }`}>
                                     {activity.type === 'user' && <Users className="w-5 h-5 text-blue-600" />}
                                     {activity.type === 'event' && <Calendar className="w-5 h-5 text-green-600" />}

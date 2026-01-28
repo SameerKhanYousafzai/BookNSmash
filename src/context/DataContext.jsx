@@ -4,7 +4,8 @@ import {
     upcomingEvents as initialEvents,
     players as initialPlayers,
     matches as initialMatches,
-    products as initialProducts
+    products as initialProducts,
+    teams as initialTeams
 } from '../data/mockData';
 
 const DataContext = createContext(null);
@@ -30,6 +31,11 @@ const ACTIONS = {
     ADD_MATCH: 'ADD_MATCH',
     UPDATE_MATCH: 'UPDATE_MATCH',
     DELETE_MATCH: 'DELETE_MATCH',
+
+    // Teams
+    ADD_TEAM: 'ADD_TEAM',
+    UPDATE_TEAM: 'UPDATE_TEAM',
+    DELETE_TEAM: 'DELETE_TEAM',
 
     // Sync
     SYNC_DATA: 'SYNC_DATA',
@@ -83,11 +89,34 @@ function dataReducer(state, action) {
         case ACTIONS.DELETE_MATCH:
             return { ...state, matches: state.matches.filter(m => m.id !== action.payload) };
 
+        // Teams
+        case ACTIONS.ADD_TEAM:
+            return {
+                ...state,
+                teams: [...(Array.isArray(state.teams) ? state.teams : []), action.payload]
+            };
+        case ACTIONS.UPDATE_TEAM:
+            return {
+                ...state,
+                teams: (Array.isArray(state.teams) ? state.teams : []).map(t => t.id === action.payload.id ? action.payload : t)
+            };
+        case ACTIONS.DELETE_TEAM:
+            return {
+                ...state,
+                teams: (Array.isArray(state.teams) ? state.teams : []).filter(t => t.id !== action.payload)
+            };
+
         // Sync
         case ACTIONS.SYNC_DATA:
-            return action.payload;
+            return {
+                ...action.payload,
+                teams: Array.isArray(action.payload.teams) ? action.payload.teams : []
+            };
         case ACTIONS.INIT_DATA:
-            return action.payload;
+            return {
+                ...action.payload,
+                teams: Array.isArray(action.payload.teams) ? action.payload.teams : []
+            };
 
         default:
             return state;
@@ -101,6 +130,7 @@ const initialState = {
     players: initialPlayers.map(p => ({ ...p, adminOnly: true })),
     matches: initialMatches.map(m => ({ ...m, adminOnly: true })),
     products: initialProducts,
+    teams: Array.isArray(initialTeams) ? initialTeams.map(t => ({ ...t })) : [],
     bookings: [],
 };
 
@@ -155,6 +185,7 @@ export const DataProvider = ({ children }) => {
         players: state.players,
         matches: state.matches,
         products: state.products,
+        teams: state.teams,
         bookings: state.bookings,
 
         // Venue actions
@@ -176,6 +207,11 @@ export const DataProvider = ({ children }) => {
         addMatch: (match) => dispatch({ type: ACTIONS.ADD_MATCH, payload: match }),
         updateMatch: (match) => dispatch({ type: ACTIONS.UPDATE_MATCH, payload: match }),
         deleteMatch: (id) => dispatch({ type: ACTIONS.DELETE_MATCH, payload: id }),
+
+        // Team actions
+        addTeam: (team) => dispatch({ type: ACTIONS.ADD_TEAM, payload: team }),
+        updateTeam: (team) => dispatch({ type: ACTIONS.UPDATE_TEAM, payload: team }),
+        deleteTeam: (id) => dispatch({ type: ACTIONS.DELETE_TEAM, payload: id }),
     };
 
     return <DataContext.Provider value={value}>{children}</DataContext.Provider>;

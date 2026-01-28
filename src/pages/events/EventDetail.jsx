@@ -129,8 +129,8 @@ export default function EventDetail() {
                         </Button>
                         <div className="flex items-center gap-3 mb-4">
                             <span className={`px-4 py-2 rounded-full text-sm font-semibold ${event.status === 'Open'
-                                    ? 'bg-green-500 text-white'
-                                    : 'bg-red-500 text-white'
+                                ? 'bg-green-500 text-white'
+                                : 'bg-red-500 text-white'
                                 }`}>
                                 {event.status}
                             </span>
@@ -316,8 +316,8 @@ export default function EventDetail() {
                         {message.text && (
                             <div
                                 className={`p-4 rounded-lg flex items-start space-x-3 ${message.type === 'success'
-                                        ? 'bg-green-50 text-green-800'
-                                        : 'bg-red-50 text-red-800'
+                                    ? 'bg-green-50 text-green-800'
+                                    : 'bg-red-50 text-red-800'
                                     }`}
                             >
                                 {message.type === 'success' ? (
@@ -344,7 +344,7 @@ export default function EventDetail() {
                             value={registrationData.name}
                             onChange={handleChange}
                             error={errors.name}
-                            placeholder="John Doe"
+                            placeholder="Full Name"
                             required
                         />
 

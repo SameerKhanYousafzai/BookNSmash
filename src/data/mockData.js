@@ -343,6 +343,7 @@ export const teams = [
         losses: 5,
         captain: 'David Lee',
         description: 'Competitive 5-a-side football team',
+        isPublic: true,
     },
     {
         id: 2,
@@ -354,6 +355,7 @@ export const teams = [
         losses: 8,
         captain: 'Sarah Smith',
         description: 'Championship-winning basketball team',
+        isPublic: true,
     },
 ];
 
