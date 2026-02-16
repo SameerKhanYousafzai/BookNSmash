@@ -13,7 +13,7 @@ router.post('/register', validate(registerSchema), async (req: Request, res: Res
         const { name, email, password } = req.body;
 
         // Check if user already exists
-        const existingUser = findUserByEmail(email);
+        const existingUser = await findUserByEmail(email);
         if (existingUser) {
             return res.status(400).json({
                 error: 'Registration failed',
@@ -48,7 +48,7 @@ router.post('/login', validate(loginSchema), async (req: Request, res: Response)
         const { email, password } = req.body;
 
         // Find user
-        const user = findUserByEmail(email);
+        const user = await findUserByEmail(email);
         if (!user) {
             return res.status(401).json({
                 error: 'Login failed',
@@ -89,7 +89,7 @@ router.post('/admin/login', validate(loginSchema), async (req: Request, res: Res
         const { email, password } = req.body;
 
         // Find user
-        const user = findUserByEmail(email);
+        const user = await findUserByEmail(email);
         if (!user || user.role !== 'ADMIN') {
             return res.status(401).json({
                 error: 'Login failed',
@@ -133,7 +133,7 @@ router.post('/refresh', validate(refreshTokenSchema), async (req: Request, res: 
         const payload = verifyRefreshToken(refreshToken);
 
         // Find user
-        const user = findUserById(payload.userId);
+        const user = await findUserById(payload.userId);
         if (!user) {
             return res.status(401).json({
                 error: 'Token refresh failed',

@@ -4,6 +4,8 @@ import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import config from './config/env';
 import { errorHandler } from './middleware/errorHandler';
+import { testConnection } from './db';
+import { ensureAdminUser } from './models/User';
 
 // Import routes
 import authRoutes from './routes/auth';
@@ -17,10 +19,14 @@ const app: Application = express();
 // Security middleware
 app.use(helmet());
 
-// CORS configuration
+// CORS configuration — allow Vite dev server + production origins
 app.use(
     cors({
-        origin: config.corsOrigin,
+        origin: [
+            'http://localhost:5173',
+            'http://localhost:3000',
+            config.corsOrigin,
+        ].filter(Boolean),
         credentials: true,
     })
 );
@@ -28,7 +34,7 @@ app.use(
 // Rate limiting
 const limiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100, // Limit each IP to 100 requests per windowMs
+    max: 100,
     message: 'Too many requests from this IP, please try again later',
 });
 
@@ -38,12 +44,13 @@ app.use('/api/', limiter);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Health check endpoint
+// Health check endpoint — used by frontend to verify backend is alive
 app.get('/health', (_req: Request, res: Response) => {
     res.json({
         status: 'ok',
         timestamp: new Date().toISOString(),
         uptime: process.uptime(),
+        port: config.port,
     });
 });
 
@@ -65,30 +72,47 @@ app.use((_req: Request, res: Response) => {
 // Global error handler (must be last)
 app.use(errorHandler);
 
-// Start server
+// ─── Start server ────────────────────────────────────────────────────────────
 const PORT = config.port;
 
-app.listen(PORT, () => {
-    console.log(`🚀 BookNSmash Backend Server`);
-    console.log(`📡 Server running on port ${PORT}`);
-    console.log(`🌍 Environment: ${config.nodeEnv}`);
-    console.log(`🔗 CORS enabled for: ${config.corsOrigin}`);
-    console.log(`✅ Health check: http://localhost:${PORT}/health`);
-    console.log(`\n📚 API Endpoints:`);
-    console.log(`   POST   /api/auth/register`);
-    console.log(`   POST   /api/auth/login`);
-    console.log(`   POST   /api/auth/admin/login`);
-    console.log(`   POST   /api/auth/refresh`);
-    console.log(`   POST   /api/auth/logout`);
-    console.log(`   GET    /api/users/me`);
-    console.log(`   PUT    /api/users/me`);
-    console.log(`   GET    /api/events`);
-    console.log(`   POST   /api/events`);
-    console.log(`   GET    /api/venues`);
-    console.log(`   POST   /api/venues`);
-    console.log(`   GET    /api/teams`);
-    console.log(`   POST   /api/teams`);
-    console.log(`\n🔐 Admin credentials: admin@booknsmash.com / admin123`);
-});
+const startServer = async () => {
+    console.log('\n🔄 Starting BookNSmash Backend...');
+    console.log(`   Port: ${PORT}`);
+    console.log(`   Environment: ${config.nodeEnv}`);
 
-export default app;
+    try {
+        // Step 1: Test database
+        console.log('\n📦 Connecting to database...');
+        await testConnection();
+
+        // Step 2: Seed admin user
+        console.log('👤 Ensuring admin user exists...');
+        await ensureAdminUser();
+
+        // Step 3: Bind to port
+        app.listen(PORT, () => {
+            console.log(`\n✅ Backend server is READY`);
+            console.log(`   📡 http://localhost:${PORT}`);
+            console.log(`   🏥 Health check: http://localhost:${PORT}/health`);
+            console.log(`   🔗 CORS origins: localhost:5173, localhost:3000`);
+            console.log(`   🔐 Admin: admin@booknsmash.com / admin123\n`);
+        });
+    } catch (error) {
+        console.error('\n❌ FATAL: Failed to start server');
+        console.error('   Error:', error instanceof Error ? error.message : error);
+
+        if (error instanceof Error && error.message.includes('EADDRINUSE')) {
+            console.error(`\n⚠️  Port ${PORT} is already in use!`);
+            console.error(`   Fix: kill the process using port ${PORT}, or change PORT in .env`);
+        }
+
+        if (error instanceof Error && error.message.includes('DATABASE_URL')) {
+            console.error(`\n⚠️  Database connection failed!`);
+            console.error(`   Fix: check DATABASE_URL in backend/.env`);
+        }
+
+        process.exit(1);
+    }
+};
+
+startServer();

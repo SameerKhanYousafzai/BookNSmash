@@ -1,82 +1,102 @@
-import { User } from '../types';
+import { eq } from 'drizzle-orm';
+import { db, users } from '../db';
 import { hashPassword } from '../services/password';
 
-// In-memory user storage
-const users: User[] = [];
+// Type derived from Drizzle schema
+type User = typeof users.$inferSelect;
 
-// Initialize with admin user
-(async () => {
-    const adminHash = await hashPassword('admin123');
-    users.push({
-        id: 'admin-001',
-        name: 'Admin',
-        email: 'admin@booknsmash.com',
-        passwordHash: adminHash,
-        role: 'ADMIN',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-    });
-})();
+// ─── CRUD Operations (PostgreSQL via Drizzle) ────────────────────────────────
 
-// Helper to generate unique ID
-let userIdCounter = 1;
-const generateUserId = (): string => {
-    return `user-${String(userIdCounter++).padStart(6, '0')}`;
-};
-
-// CRUD operations
 export const createUser = async (data: {
     name: string;
     email: string;
     password: string;
 }): Promise<User> => {
     const passwordHash = await hashPassword(data.password);
-    const user: User = {
-        id: generateUserId(),
-        name: data.name,
-        email: data.email.toLowerCase(),
-        passwordHash,
-        role: 'USER',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-    };
-    users.push(user);
+
+    try {
+        const [user] = await db
+            .insert(users)
+            .values({
+                name: data.name,
+                email: data.email.toLowerCase(),
+                passwordHash,
+                role: 'USER',
+            })
+            .returning();
+
+        console.log(`✅ User created in DB: ${user.id} (${user.email})`);
+        return user;
+    } catch (error) {
+        console.error('❌ FAILED to insert user into database:', error);
+        throw error;
+    }
+};
+
+export const findUserByEmail = async (email: string): Promise<User | undefined> => {
+    const [user] = await db
+        .select()
+        .from(users)
+        .where(eq(users.email, email.toLowerCase()))
+        .limit(1);
+
     return user;
 };
 
-export const findUserByEmail = (email: string): User | undefined => {
-    return users.find((u) => u.email === email.toLowerCase());
+export const findUserById = async (id: string): Promise<User | undefined> => {
+    const [user] = await db
+        .select()
+        .from(users)
+        .where(eq(users.id, id))
+        .limit(1);
+
+    return user;
 };
 
-export const findUserById = (id: string): User | undefined => {
-    return users.find((u) => u.id === id);
+export const updateUser = async (
+    id: string,
+    data: { name?: string; email?: string }
+): Promise<User | null> => {
+    const [updated] = await db
+        .update(users)
+        .set({
+            ...data,
+            updatedAt: new Date(),
+        })
+        .where(eq(users.id, id))
+        .returning();
+
+    return updated ?? null;
 };
 
-export const updateUser = (id: string, data: Partial<Pick<User, 'name' | 'email'>>): User | null => {
-    const userIndex = users.findIndex((u) => u.id === id);
-    if (userIndex === -1) return null;
-
-    users[userIndex] = {
-        ...users[userIndex],
-        ...data,
-        updatedAt: new Date(),
-    };
-    return users[userIndex];
+export const getAllUsers = async (): Promise<User[]> => {
+    return db.select().from(users);
 };
 
-export const getAllUsers = (): User[] => {
-    return users;
-};
-
-export const deleteUser = (id: string): boolean => {
-    const index = users.findIndex((u) => u.id === id);
-    if (index === -1) return false;
-    users.splice(index, 1);
-    return true;
+export const deleteUser = async (id: string): Promise<boolean> => {
+    const result = await db.delete(users).where(eq(users.id, id)).returning();
+    return result.length > 0;
 };
 
 // Helper to get user without password hash
 export const sanitizeUser = (user: User) => {
     const { passwordHash, ...sanitized } = user;
     return sanitized;
+};
+
+// Seed admin user if not exists
+export const ensureAdminUser = async (): Promise<void> => {
+    const existing = await findUserByEmail('admin@booknsmash.com');
+    if (!existing) {
+        const passwordHash = await hashPassword('admin123');
+        await db.insert(users).values({
+            name: 'Admin',
+            email: 'admin@booknsmash.com',
+            passwordHash,
+            role: 'ADMIN',
+        });
+        console.log('✅ Admin user seeded in database');
+    } else {
+        console.log('ℹ️  Admin user already exists');
+    }
 };

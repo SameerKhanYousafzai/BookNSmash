@@ -8,9 +8,9 @@ import { findUserById, getAllUsers, updateUser, sanitizeUser } from '../models/U
 const router = Router();
 
 // GET /api/users/me - Get current user profile
-router.get('/me', authenticate, (req: Request, res: Response) => {
+router.get('/me', authenticate, async (req: Request, res: Response) => {
     try {
-        const user = findUserById(req.user!.userId);
+        const user = await findUserById(req.user!.userId);
 
         if (!user) {
             return res.status(404).json({
@@ -38,7 +38,8 @@ router.put('/me', authenticate, validate(updateUserSchema), async (req: Request,
 
         // Check if email is already taken by another user
         if (email) {
-            const existingUser = getAllUsers().find(
+            const allUsers = await getAllUsers();
+            const existingUser = allUsers.find(
                 (u) => u.email === email.toLowerCase() && u.id !== userId
             );
             if (existingUser) {
@@ -49,7 +50,7 @@ router.put('/me', authenticate, validate(updateUserSchema), async (req: Request,
             }
         }
 
-        const updatedUser = updateUser(userId, { name, email });
+        const updatedUser = await updateUser(userId, { name, email });
 
         if (!updatedUser) {
             return res.status(404).json({
@@ -71,9 +72,9 @@ router.put('/me', authenticate, validate(updateUserSchema), async (req: Request,
 });
 
 // GET /api/users - List all users (admin only)
-router.get('/', authenticate, requireRole('ADMIN'), (_req: Request, res: Response) => {
+router.get('/', authenticate, requireRole('ADMIN'), async (_req: Request, res: Response) => {
     try {
-        const users = getAllUsers().map(sanitizeUser);
+        const users = (await getAllUsers()).map(sanitizeUser);
         res.json({
             users,
             total: users.length,
@@ -87,9 +88,9 @@ router.get('/', authenticate, requireRole('ADMIN'), (_req: Request, res: Respons
 });
 
 // GET /api/users/:id - Get user by ID (admin only)
-router.get('/:id', authenticate, requireRole('ADMIN'), (req: Request, res: Response) => {
+router.get('/:id', authenticate, requireRole('ADMIN'), async (req: Request, res: Response) => {
     try {
-        const user = findUserById(req.params.id);
+        const user = await findUserById(req.params.id);
 
         if (!user) {
             return res.status(404).json({

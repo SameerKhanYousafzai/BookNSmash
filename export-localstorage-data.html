@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BookNSmash - Export localStorage Data</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0f172a; color: #e2e8f0; min-height: 100vh;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .container { max-width: 700px; width: 100%; padding: 2rem; }
+        h1 { font-size: 1.8rem; margin-bottom: 0.5rem; color: #38bdf8; }
+        .subtitle { color: #94a3b8; margin-bottom: 2rem; }
+        .card {
+            background: #1e293b; border-radius: 12px; padding: 1.5rem;
+            margin-bottom: 1rem; border: 1px solid #334155;
+        }
+        .card h3 { color: #38bdf8; margin-bottom: 0.5rem; font-size: 0.95rem; }
+        .stat { display: flex; justify-content: space-between; padding: 0.4rem 0; border-bottom: 1px solid #334155; }
+        .stat:last-child { border-bottom: none; }
+        .stat-label { color: #94a3b8; }
+        .stat-value { color: #22c55e; font-weight: 600; }
+        .stat-value.empty { color: #ef4444; }
+        .btn {
+            display: inline-block; padding: 0.8rem 2rem; border: none; border-radius: 8px;
+            font-size: 1rem; font-weight: 600; cursor: pointer; margin-top: 1rem;
+            transition: all 0.2s;
+        }
+        .btn-primary { background: #2563eb; color: white; }
+        .btn-primary:hover { background: #1d4ed8; }
+        .btn-primary:disabled { background: #475569; cursor: not-allowed; }
+        .status { margin-top: 1rem; padding: 1rem; border-radius: 8px; display: none; }
+        .status.success { display: block; background: #14532d; border: 1px solid #22c55e; color: #86efac; }
+        .status.error { display: block; background: #450a0a; border: 1px solid #ef4444; color: #fca5a5; }
+        .status.warning { display: block; background: #422006; border: 1px solid #f59e0b; color: #fde68a; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📦 BookNSmash Data Export</h1>
+        <p class="subtitle">Extract all localStorage data for migration to PostgreSQL</p>
+
+        <div class="card">
+            <h3>📊 Data Summary</h3>
+            <div id="summary">Scanning localStorage...</div>
+        </div>
+
+        <button class="btn btn-primary" id="exportBtn" onclick="exportData()">
+            ⬇️ Download Export (JSON)
+        </button>
+
+        <div id="status"></div>
+    </div>
+
+    <script>
+        const KEYS = {
+            mainData: 'booknsmash_data',
+            usersDb: 'booknsmash_users_db',
+            teams: 'booknsmash_teams',
+            isAuthenticated: 'isAuthenticated',
+            userRole: 'userRole',
+            currentUser: 'currentUser',
+        };
+
+        function safeGet(key) {
+            try {
+                const raw = localStorage.getItem(key);
+                if (!raw) return null;
+                return JSON.parse(raw);
+            } catch (e) {
+                return localStorage.getItem(key);
+            }
+        }
+
+        function countItems(data) {
+            if (Array.isArray(data)) return data.length;
+            if (data && typeof data === 'object') return Object.keys(data).length;
+            return data ? 1 : 0;
+        }
+
+        // Scan and display summary
+        function scanData() {
+            const summaryEl = document.getElementById('summary');
+            const mainData = safeGet(KEYS.mainData);
+            const usersDb = safeGet(KEYS.usersDb);
+            const teamsSync = safeGet(KEYS.teams);
+
+            const rows = [];
+
+            // Main data blob
+            if (mainData) {
+                const fields = ['venues', 'events', 'players', 'matches', 'teams', 'products', 'bookings'];
+                fields.forEach(field => {
+                    const count = countItems(mainData[field]);
+                    rows.push({ label: `booknsmash_data.${field}`, value: count });
+                });
+            } else {
+                rows.push({ label: 'booknsmash_data', value: 0, empty: true });
+            }
+
+            // Users DB
+            rows.push({
+                label: 'booknsmash_users_db (registered users)',
+                value: countItems(usersDb),
+                empty: !usersDb
+            });
+
+            // Teams sync
+            rows.push({
+                label: 'booknsmash_teams (sync copy)',
+                value: countItems(teamsSync),
+                empty: !teamsSync
+            });
+
+            let html = '';
+            rows.forEach(r => {
+                const cls = r.empty ? 'empty' : '';
+                html += `<div class="stat">
+                    <span class="stat-label">${r.label}</span>
+                    <span class="stat-value ${cls}">${r.value} items</span>
+                </div>`;
+            });
+
+            summaryEl.innerHTML = html;
+
+            // Disable export if nothing found
+            const hasData = rows.some(r => r.value > 0);
+            if (!hasData) {
+                document.getElementById('exportBtn').disabled = true;
+                showStatus('warning', 'No BookNSmash data found in localStorage. Make sure you open this page in the same browser where you use the app.');
+            }
+        }
+
+        function showStatus(type, msg) {
+            const el = document.getElementById('status');
+            el.className = `status ${type}`;
+            el.textContent = msg;
+        }
+
+        function exportData() {
+            try {
+                const exportPayload = {
+                    exportedAt: new Date().toISOString(),
+                    version: '1.0',
+                    source: 'localStorage',
+                };
+
+                // Grab everything
+                Object.entries(KEYS).forEach(([name, key]) => {
+                    exportPayload[name] = safeGet(key);
+                });
+
+                // Also grab any other booknsmash_ keys we might have missed
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    if (key.startsWith('booknsmash_') && !Object.values(KEYS).includes(key)) {
+                        exportPayload[`extra_${key}`] = safeGet(key);
+                    }
+                }
+
+                const json = JSON.stringify(exportPayload, null, 2);
+                const blob = new Blob([json], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'booknsmash-export.json';
+                a.click();
+                URL.revokeObjectURL(url);
+
+                showStatus('success', `✅ Export downloaded! File size: ${(json.length / 1024).toFixed(1)} KB. Place the file in backend/ directory before running the seed script.`);
+            } catch (err) {
+                showStatus('error', `❌ Export failed: ${err.message}`);
+            }
+        }
+
+        // Run on load
+        scanData();
+    </script>
+</body>
+</html>

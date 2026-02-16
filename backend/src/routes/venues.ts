@@ -14,11 +14,11 @@ import {
 const router = Router();
 
 // GET /api/venues - List all venues (public)
-router.get('/', (req: Request, res: Response) => {
+router.get('/', async (req: Request, res: Response) => {
     try {
         const { sport, location } = req.query;
 
-        const venues = getAllVenues({
+        const venues = await getAllVenues({
             sport: sport as string,
             location: location as string,
         });
@@ -28,6 +28,7 @@ router.get('/', (req: Request, res: Response) => {
             total: venues.length,
         });
     } catch (error) {
+        console.error('❌ Failed to fetch venues:', error);
         res.status(500).json({
             error: 'Failed to fetch venues',
             message: error instanceof Error ? error.message : 'Unknown error',
@@ -36,9 +37,9 @@ router.get('/', (req: Request, res: Response) => {
 });
 
 // GET /api/venues/:id - Get venue details (public)
-router.get('/:id', (req: Request, res: Response) => {
+router.get('/:id', async (req: Request, res: Response) => {
     try {
-        const venue = findVenueById(req.params.id);
+        const venue = await findVenueById(req.params.id);
 
         if (!venue) {
             return res.status(404).json({
@@ -49,6 +50,7 @@ router.get('/:id', (req: Request, res: Response) => {
 
         res.json({ venue });
     } catch (error) {
+        console.error('❌ Failed to fetch venue:', error);
         res.status(500).json({
             error: 'Failed to fetch venue',
             message: error instanceof Error ? error.message : 'Unknown error',
@@ -57,15 +59,16 @@ router.get('/:id', (req: Request, res: Response) => {
 });
 
 // POST /api/venues - Create venue (admin only)
-router.post('/', authenticate, requireRole('ADMIN'), validate(createVenueSchema), (req: Request, res: Response) => {
+router.post('/', authenticate, requireRole('ADMIN'), validate(createVenueSchema), async (req: Request, res: Response) => {
     try {
-        const venue = createVenue(req.body);
+        const venue = await createVenue(req.body);
 
         res.status(201).json({
             message: 'Venue created successfully',
             venue,
         });
     } catch (error) {
+        console.error('❌ Failed to create venue:', error);
         res.status(500).json({
             error: 'Failed to create venue',
             message: error instanceof Error ? error.message : 'Unknown error',
@@ -74,9 +77,9 @@ router.post('/', authenticate, requireRole('ADMIN'), validate(createVenueSchema)
 });
 
 // PUT /api/venues/:id - Update venue (admin only)
-router.put('/:id', authenticate, requireRole('ADMIN'), validate(updateVenueSchema), (req: Request, res: Response) => {
+router.put('/:id', authenticate, requireRole('ADMIN'), validate(updateVenueSchema), async (req: Request, res: Response) => {
     try {
-        const venue = updateVenue(req.params.id, req.body);
+        const venue = await updateVenue(req.params.id, req.body);
 
         if (!venue) {
             return res.status(404).json({
@@ -90,6 +93,7 @@ router.put('/:id', authenticate, requireRole('ADMIN'), validate(updateVenueSchem
             venue,
         });
     } catch (error) {
+        console.error('❌ Failed to update venue:', error);
         res.status(500).json({
             error: 'Failed to update venue',
             message: error instanceof Error ? error.message : 'Unknown error',
@@ -98,9 +102,9 @@ router.put('/:id', authenticate, requireRole('ADMIN'), validate(updateVenueSchem
 });
 
 // DELETE /api/venues/:id - Delete venue (admin only)
-router.delete('/:id', authenticate, requireRole('ADMIN'), (req: Request, res: Response) => {
+router.delete('/:id', authenticate, requireRole('ADMIN'), async (req: Request, res: Response) => {
     try {
-        const success = deleteVenue(req.params.id);
+        const success = await deleteVenue(req.params.id);
 
         if (!success) {
             return res.status(404).json({
@@ -113,6 +117,7 @@ router.delete('/:id', authenticate, requireRole('ADMIN'), (req: Request, res: Re
             message: 'Venue deleted successfully',
         });
     } catch (error) {
+        console.error('❌ Failed to delete venue:', error);
         res.status(500).json({
             error: 'Failed to delete venue',
             message: error instanceof Error ? error.message : 'Unknown error',

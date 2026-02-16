@@ -1,26 +1,28 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import api from '../services/api';
 
 const AuthContext = createContext(null);
 
 /**
  * AuthProvider Component
- * Manages authentication state and provides auth methods to the entire app
- * Uses localStorage to persist authentication across page refreshes
+ * Manages authentication state and provides auth methods to the entire app.
+ * All auth operations call the backend API via the api service (with retry logic).
  */
 export const AuthProvider = ({ children }) => {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
-    const [userRole, setUserRole] = useState(null); // 'USER' | 'ADMIN' | null
+    const [userRole, setUserRole] = useState(null);
     const [currentUser, setCurrentUser] = useState(null);
+    const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
 
     // Check for existing auth on mount
     useEffect(() => {
-        const storedAuth = localStorage.getItem('isAuthenticated');
+        const token = localStorage.getItem('accessToken');
         const storedRole = localStorage.getItem('userRole');
         const storedUser = localStorage.getItem('currentUser');
 
-        if (storedAuth === 'true' && storedRole) {
+        if (token && storedRole) {
             setIsAuthenticated(true);
             setUserRole(storedRole);
             setCurrentUser(storedUser ? JSON.parse(storedUser) : null);
@@ -28,102 +30,102 @@ export const AuthProvider = ({ children }) => {
     }, []);
 
     /**
-     * User Login
-     * Mock authentication - checks against localStorage database
+     * Helper: persist auth state to localStorage
      */
-    const loginUser = (email, password) => {
-        // Mock validation
-        if (email && password) {
-            // Get users from DB
-            const usersDb = JSON.parse(localStorage.getItem('booknsmash_users_db') || '{}');
-            const storedUser = usersDb[email.toLowerCase()];
-
-            const user = {
-                id: storedUser?.id || 1,
-                name: storedUser?.name || 'User',
-                email: email,
-                avatar: storedUser?.avatar || 'https://i.pravatar.cc/150?img=12',
-            };
-
-            setIsAuthenticated(true);
-            setUserRole('USER');
-            setCurrentUser(user);
-
-            localStorage.setItem('isAuthenticated', 'true');
-            localStorage.setItem('userRole', 'USER');
-            localStorage.setItem('currentUser', JSON.stringify(user));
-
-            navigate('/');
-            return { success: true };
-        }
-        return { success: false, message: 'Invalid credentials' };
+    const persistAuth = (user, role, accessToken, refreshToken) => {
+        localStorage.setItem('isAuthenticated', 'true');
+        localStorage.setItem('userRole', role);
+        localStorage.setItem('currentUser', JSON.stringify(user));
+        localStorage.setItem('accessToken', accessToken);
+        if (refreshToken) localStorage.setItem('refreshToken', refreshToken);
     };
 
     /**
-     * User Registration
-     * Mock registration - saves to localStorage database
+     * User Login — calls POST /api/auth/login
      */
-    const registerUser = (name, email, password) => {
-        // Mock validation
-        if (name && email && password) {
-            const user = {
-                id: Date.now(),
-                name: name,
-                email: email,
-                avatar: 'https://i.pravatar.cc/150?img=12',
-            };
+    const loginUser = async (email, password) => {
+        setLoading(true);
+        try {
+            const res = await api.post('/auth/login', { email, password });
+            const data = await res.json();
 
-            // Save to users DB
-            const usersDb = JSON.parse(localStorage.getItem('booknsmash_users_db') || '{}');
-            usersDb[email.toLowerCase()] = user;
-            localStorage.setItem('booknsmash_users_db', JSON.stringify(usersDb));
+            if (!res.ok) {
+                return { success: false, message: data.message || 'Login failed' };
+            }
 
             setIsAuthenticated(true);
-            setUserRole('USER');
-            setCurrentUser(user);
-
-            localStorage.setItem('isAuthenticated', 'true');
-            localStorage.setItem('userRole', 'USER');
-            localStorage.setItem('currentUser', JSON.stringify(user));
+            setUserRole(data.user.role || 'USER');
+            setCurrentUser(data.user);
+            persistAuth(data.user, data.user.role || 'USER', data.accessToken, data.refreshToken);
 
             navigate('/');
             return { success: true };
+        } catch (error) {
+            console.error('Login error:', error);
+            return { success: false, message: error.message || 'Network error. Is the backend running?' };
+        } finally {
+            setLoading(false);
         }
-        return { success: false, message: 'All fields are required' };
     };
 
     /**
-     * Admin Login
-     * Mock admin authentication
-     * Default credentials: admin@booknsmash.com / admin123
+     * User Registration — calls POST /api/auth/register
      */
-    const loginAdmin = (email, password) => {
-        // Mock admin credentials
-        if (email === 'admin@booknsmash.com' && password === 'admin123') {
-            const admin = {
-                id: 999,
-                name: 'Admin',
-                email: email,
-                role: 'ADMIN',
-            };
+    const registerUser = async (name, email, password) => {
+        setLoading(true);
+        try {
+            const res = await api.post('/auth/register', { name, email, password });
+            const data = await res.json();
+
+            if (!res.ok) {
+                return { success: false, message: data.message || 'Registration failed' };
+            }
+
+            setIsAuthenticated(true);
+            setUserRole('USER');
+            setCurrentUser(data.user);
+            persistAuth(data.user, 'USER', data.accessToken, data.refreshToken);
+
+            navigate('/');
+            return { success: true };
+        } catch (error) {
+            console.error('Registration error:', error);
+            return { success: false, message: error.message || 'Network error. Is the backend running?' };
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    /**
+     * Admin Login — calls POST /api/auth/admin/login
+     */
+    const loginAdmin = async (email, password) => {
+        setLoading(true);
+        try {
+            const res = await api.post('/auth/admin/login', { email, password });
+            const data = await res.json();
+
+            if (!res.ok) {
+                return { success: false, message: data.message || 'Invalid admin credentials' };
+            }
 
             setIsAuthenticated(true);
             setUserRole('ADMIN');
-            setCurrentUser(admin);
-
-            localStorage.setItem('isAuthenticated', 'true');
-            localStorage.setItem('userRole', 'ADMIN');
-            localStorage.setItem('currentUser', JSON.stringify(admin));
+            setCurrentUser(data.user);
+            persistAuth(data.user, 'ADMIN', data.accessToken, data.refreshToken);
 
             navigate('/admin/dashboard/weekly');
             return { success: true };
+        } catch (error) {
+            console.error('Admin login error:', error);
+            return { success: false, message: error.message || 'Network error. Is the backend running?' };
+        } finally {
+            setLoading(false);
         }
-        return { success: false, message: 'Invalid admin credentials' };
     };
 
     /**
-     * Logout
-     * Clears all authentication data
+     * Logout — clears all authentication data
      */
     const logout = () => {
         setIsAuthenticated(false);
@@ -133,6 +135,8 @@ export const AuthProvider = ({ children }) => {
         localStorage.removeItem('isAuthenticated');
         localStorage.removeItem('userRole');
         localStorage.removeItem('currentUser');
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
 
         navigate('/login');
     };
@@ -141,6 +145,7 @@ export const AuthProvider = ({ children }) => {
         isAuthenticated,
         userRole,
         currentUser,
+        loading,
         loginUser,
         registerUser,
         loginAdmin,
@@ -152,7 +157,6 @@ export const AuthProvider = ({ children }) => {
 
 /**
  * Custom hook to use auth context
- * Throws error if used outside AuthProvider
  */
 export const useAuth = () => {
     const context = useContext(AuthContext);

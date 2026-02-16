@@ -1,125 +1,161 @@
-import { Event } from '../types';
+import { eq, ilike, and, sql } from 'drizzle-orm';
+import { db, events, eventRegistrations } from '../db';
 
-// In-memory event storage
-const events: Event[] = [];
+// Types derived from Drizzle schema
+type Event = typeof events.$inferSelect;
+type EventInsert = typeof events.$inferInsert;
 
-// Initialize with sample events
-events.push(
-    {
-        id: 'event-001',
-        title: 'Summer Cricket Championship',
-        description: 'Annual cricket tournament featuring top teams from the region',
-        sport: 'cricket',
-        startDate: new Date('2026-03-15'),
-        endDate: new Date('2026-03-17'),
-        entryFee: 1000,
-        maxParticipants: 16,
-        venueId: 'venue-001',
-        registeredUserIds: [],
-        status: 'upcoming',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-    },
-    {
-        id: 'event-002',
-        title: 'Badminton Open 2026',
-        description: 'Open badminton tournament for all skill levels',
-        sport: 'badminton',
-        startDate: new Date('2026-04-01'),
-        endDate: new Date('2026-04-02'),
-        entryFee: 500,
-        maxParticipants: 32,
-        venueId: 'venue-002',
-        registeredUserIds: [],
-        status: 'upcoming',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-    }
-);
+// ─── CRUD Operations (PostgreSQL via Drizzle) ────────────────────────────────
 
-let eventIdCounter = 3;
-const generateEventId = (): string => {
-    return `event-${String(eventIdCounter++).padStart(3, '0')}`;
-};
+export const createEvent = async (data: {
+    title: string;
+    description?: string;
+    sport: string;
+    startDate: Date;
+    endDate: Date;
+    venueId: string;
+    maxParticipants: number;
+    entryFee?: number;
+    status?: 'UPCOMING' | 'ONGOING' | 'COMPLETED' | 'CANCELLED';
+}): Promise<Event> => {
+    const [event] = await db
+        .insert(events)
+        .values({
+            title: data.title,
+            description: data.description ?? null,
+            sport: data.sport,
+            startDate: data.startDate,
+            endDate: data.endDate,
+            venueId: data.venueId,
+            maxParticipants: data.maxParticipants,
+            entryFee: String(data.entryFee ?? 0),
+            status: data.status ?? 'UPCOMING',
+        })
+        .returning();
 
-// CRUD operations
-export const createEvent = (data: Omit<Event, 'id' | 'registeredUserIds' | 'createdAt' | 'updatedAt'>): Event => {
-    const event: Event = {
-        id: generateEventId(),
-        ...data,
-        registeredUserIds: [],
-        createdAt: new Date(),
-        updatedAt: new Date(),
-    };
-    events.push(event);
+    console.log(`✅ Event created in DB: ${event.id} (${event.title})`);
     return event;
 };
 
-export const findEventById = (id: string): Event | undefined => {
-    return events.find((e) => e.id === id);
+export const findEventById = async (id: string): Promise<Event | undefined> => {
+    const [event] = await db
+        .select()
+        .from(events)
+        .where(eq(events.id, id))
+        .limit(1);
+
+    return event;
 };
 
-export const getAllEvents = (filters?: { sport?: string; status?: string }): Event[] => {
-    let filtered = events;
+export const getAllEvents = async (filters?: {
+    sport?: string;
+    status?: string;
+}): Promise<Event[]> => {
+    const conditions = [];
 
     if (filters?.sport) {
-        filtered = filtered.filter((e) => e.sport.toLowerCase() === filters.sport?.toLowerCase());
+        conditions.push(ilike(events.sport, filters.sport));
     }
-
     if (filters?.status) {
-        filtered = filtered.filter((e) => e.status === filters.status);
+        conditions.push(
+            eq(events.status, filters.status.toUpperCase() as any)
+        );
     }
 
-    return filtered;
+    if (conditions.length > 0) {
+        return db.select().from(events).where(and(...conditions));
+    }
+
+    return db.select().from(events);
 };
 
-export const updateEvent = (id: string, data: Partial<Omit<Event, 'id' | 'createdAt'>>): Event | null => {
-    const eventIndex = events.findIndex((e) => e.id === id);
-    if (eventIndex === -1) return null;
+export const updateEvent = async (
+    id: string,
+    data: Partial<Omit<EventInsert, 'id' | 'createdAt'>>
+): Promise<Event | null> => {
+    const [updated] = await db
+        .update(events)
+        .set({
+            ...data,
+            updatedAt: new Date(),
+        })
+        .where(eq(events.id, id))
+        .returning();
 
-    events[eventIndex] = {
-        ...events[eventIndex],
-        ...data,
-        updatedAt: new Date(),
-    };
-    return events[eventIndex];
+    return updated ?? null;
 };
 
-export const deleteEvent = (id: string): boolean => {
-    const index = events.findIndex((e) => e.id === id);
-    if (index === -1) return false;
-    events.splice(index, 1);
-    return true;
+export const deleteEvent = async (id: string): Promise<boolean> => {
+    const result = await db.delete(events).where(eq(events.id, id)).returning();
+    return result.length > 0;
 };
 
-// Registration operations
-export const registerUserForEvent = (eventId: string, userId: string): Event | null => {
-    const event = findEventById(eventId);
+// ─── Registration Operations (via event_registrations table) ─────────────────
+
+export const registerUserForEvent = async (
+    eventId: string,
+    userId: string
+): Promise<Event | null> => {
+    const event = await findEventById(eventId);
     if (!event) return null;
 
-    if (event.registeredUserIds.includes(userId)) {
+    // Check existing registration
+    const [existing] = await db
+        .select()
+        .from(eventRegistrations)
+        .where(
+            and(
+                eq(eventRegistrations.eventId, eventId),
+                eq(eventRegistrations.userId, userId)
+            )
+        )
+        .limit(1);
+
+    if (existing) {
         throw new Error('User already registered for this event');
     }
 
-    if (event.registeredUserIds.length >= event.maxParticipants) {
+    // Check capacity
+    const [{ count }] = await db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(eventRegistrations)
+        .where(eq(eventRegistrations.eventId, eventId));
+
+    if (count >= event.maxParticipants) {
         throw new Error('Event is full');
     }
 
-    event.registeredUserIds.push(userId);
-    event.updatedAt = new Date();
+    await db.insert(eventRegistrations).values({
+        eventId,
+        userId,
+        status: 'REGISTERED',
+    });
+
+    console.log(`✅ User ${userId} registered for event ${eventId}`);
     return event;
 };
 
-export const unregisterUserFromEvent = (eventId: string, userId: string): Event | null => {
-    const event = findEventById(eventId);
+export const unregisterUserFromEvent = async (
+    eventId: string,
+    userId: string
+): Promise<Event | null> => {
+    const event = await findEventById(eventId);
     if (!event) return null;
 
-    const index = event.registeredUserIds.indexOf(userId);
-    if (index === -1) {
+    const result = await db
+        .delete(eventRegistrations)
+        .where(
+            and(
+                eq(eventRegistrations.eventId, eventId),
+                eq(eventRegistrations.userId, userId)
+            )
+        )
+        .returning();
+
+    if (result.length === 0) {
         throw new Error('User not registered for this event');
     }
 
-    event.registeredUserIds.splice(index, 1);
-    event.updatedAt = new Date();
+    console.log(`✅ User ${userId} unregistered from event ${eventId}`);
     return event;
 };

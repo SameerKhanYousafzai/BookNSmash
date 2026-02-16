@@ -5,6 +5,7 @@ import Layout from './components/layout/Layout';
 import AdminLayout from './components/layout/AdminLayout';
 import ProtectedRoute from './components/routes/ProtectedRoute';
 import AdminRoute from './components/routes/AdminRoute';
+import ScrollToTop from './components/common/ScrollToTop';
 
 // Auth Pages
 import Login from './pages/auth/Login';
@@ -53,6 +54,7 @@ import './App.css';
 function App() {
   return (
     <Router>
+      <ScrollToTop />
       <DataProvider>
         <AuthProvider>
           <Routes>

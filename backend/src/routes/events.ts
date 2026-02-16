@@ -16,11 +16,11 @@ import {
 const router = Router();
 
 // GET /api/events - List all events (public)
-router.get('/', (req: Request, res: Response) => {
+router.get('/', async (req: Request, res: Response) => {
     try {
         const { sport, status } = req.query;
 
-        const events = getAllEvents({
+        const events = await getAllEvents({
             sport: sport as string,
             status: status as string,
         });
@@ -30,6 +30,7 @@ router.get('/', (req: Request, res: Response) => {
             total: events.length,
         });
     } catch (error) {
+        console.error('❌ Failed to fetch events:', error);
         res.status(500).json({
             error: 'Failed to fetch events',
             message: error instanceof Error ? error.message : 'Unknown error',
@@ -38,9 +39,9 @@ router.get('/', (req: Request, res: Response) => {
 });
 
 // GET /api/events/:id - Get event details (public)
-router.get('/:id', (req: Request, res: Response) => {
+router.get('/:id', async (req: Request, res: Response) => {
     try {
-        const event = findEventById(req.params.id);
+        const event = await findEventById(req.params.id);
 
         if (!event) {
             return res.status(404).json({
@@ -51,6 +52,7 @@ router.get('/:id', (req: Request, res: Response) => {
 
         res.json({ event });
     } catch (error) {
+        console.error('❌ Failed to fetch event:', error);
         res.status(500).json({
             error: 'Failed to fetch event',
             message: error instanceof Error ? error.message : 'Unknown error',
@@ -59,22 +61,23 @@ router.get('/:id', (req: Request, res: Response) => {
 });
 
 // POST /api/events - Create event (admin only)
-router.post('/', authenticate, requireRole('ADMIN'), validate(createEventSchema), (req: Request, res: Response) => {
+router.post('/', authenticate, requireRole('ADMIN'), validate(createEventSchema), async (req: Request, res: Response) => {
     try {
         const eventData = {
             ...req.body,
             startDate: new Date(req.body.startDate),
             endDate: new Date(req.body.endDate),
-            status: 'upcoming' as const,
+            status: 'UPCOMING' as const,
         };
 
-        const event = createEvent(eventData);
+        const event = await createEvent(eventData);
 
         res.status(201).json({
             message: 'Event created successfully',
             event,
         });
     } catch (error) {
+        console.error('❌ Failed to create event:', error);
         res.status(500).json({
             error: 'Failed to create event',
             message: error instanceof Error ? error.message : 'Unknown error',
@@ -83,7 +86,7 @@ router.post('/', authenticate, requireRole('ADMIN'), validate(createEventSchema)
 });
 
 // PUT /api/events/:id - Update event (admin only)
-router.put('/:id', authenticate, requireRole('ADMIN'), validate(updateEventSchema), (req: Request, res: Response) => {
+router.put('/:id', authenticate, requireRole('ADMIN'), validate(updateEventSchema), async (req: Request, res: Response) => {
     try {
         const updateData: any = { ...req.body };
 
@@ -95,7 +98,7 @@ router.put('/:id', authenticate, requireRole('ADMIN'), validate(updateEventSchem
             updateData.endDate = new Date(updateData.endDate);
         }
 
-        const event = updateEvent(req.params.id, updateData);
+        const event = await updateEvent(req.params.id, updateData);
 
         if (!event) {
             return res.status(404).json({
@@ -109,6 +112,7 @@ router.put('/:id', authenticate, requireRole('ADMIN'), validate(updateEventSchem
             event,
         });
     } catch (error) {
+        console.error('❌ Failed to update event:', error);
         res.status(500).json({
             error: 'Failed to update event',
             message: error instanceof Error ? error.message : 'Unknown error',
@@ -117,9 +121,9 @@ router.put('/:id', authenticate, requireRole('ADMIN'), validate(updateEventSchem
 });
 
 // DELETE /api/events/:id - Delete event (admin only)
-router.delete('/:id', authenticate, requireRole('ADMIN'), (req: Request, res: Response) => {
+router.delete('/:id', authenticate, requireRole('ADMIN'), async (req: Request, res: Response) => {
     try {
-        const success = deleteEvent(req.params.id);
+        const success = await deleteEvent(req.params.id);
 
         if (!success) {
             return res.status(404).json({
@@ -132,6 +136,7 @@ router.delete('/:id', authenticate, requireRole('ADMIN'), (req: Request, res: Re
             message: 'Event deleted successfully',
         });
     } catch (error) {
+        console.error('❌ Failed to delete event:', error);
         res.status(500).json({
             error: 'Failed to delete event',
             message: error instanceof Error ? error.message : 'Unknown error',
@@ -140,10 +145,10 @@ router.delete('/:id', authenticate, requireRole('ADMIN'), (req: Request, res: Re
 });
 
 // POST /api/events/:id/register - Register for event (authenticated)
-router.post('/:id/register', authenticate, (req: Request, res: Response) => {
+router.post('/:id/register', authenticate, async (req: Request, res: Response) => {
     try {
         const userId = req.user!.userId;
-        const event = registerUserForEvent(req.params.id, userId);
+        const event = await registerUserForEvent(req.params.id, userId);
 
         if (!event) {
             return res.status(404).json({
@@ -157,6 +162,7 @@ router.post('/:id/register', authenticate, (req: Request, res: Response) => {
             event,
         });
     } catch (error) {
+        console.error('❌ Registration failed:', error);
         res.status(400).json({
             error: 'Registration failed',
             message: error instanceof Error ? error.message : 'Unknown error',
@@ -165,10 +171,10 @@ router.post('/:id/register', authenticate, (req: Request, res: Response) => {
 });
 
 // DELETE /api/events/:id/register - Unregister from event (authenticated)
-router.delete('/:id/register', authenticate, (req: Request, res: Response) => {
+router.delete('/:id/register', authenticate, async (req: Request, res: Response) => {
     try {
         const userId = req.user!.userId;
-        const event = unregisterUserFromEvent(req.params.id, userId);
+        const event = await unregisterUserFromEvent(req.params.id, userId);
 
         if (!event) {
             return res.status(404).json({
@@ -182,6 +188,7 @@ router.delete('/:id/register', authenticate, (req: Request, res: Response) => {
             event,
         });
     } catch (error) {
+        console.error('❌ Unregistration failed:', error);
         res.status(400).json({
             error: 'Unregistration failed',
             message: error instanceof Error ? error.message : 'Unknown error',

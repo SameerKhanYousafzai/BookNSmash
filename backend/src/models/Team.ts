@@ -1,105 +1,100 @@
-import { Team } from '../types';
+import { eq, ilike, and, sql } from 'drizzle-orm';
+import { db, teams } from '../db';
 
-// In-memory team storage
-const teams: Team[] = [];
+// Types derived from Drizzle schema
+type Team = typeof teams.$inferSelect;
+type TeamInsert = typeof teams.$inferInsert;
 
-// Initialize with sample teams
-teams.push(
-    {
-        id: 'team-001',
-        name: 'Thunder Strikers',
-        captainId: 'user-000001',
-        memberIds: ['user-000001', 'user-000002', 'user-000003'],
-        sport: 'cricket',
-        wins: 5,
-        losses: 2,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-    },
-    {
-        id: 'team-002',
-        name: 'Smash Masters',
-        captainId: 'user-000004',
-        memberIds: ['user-000004', 'user-000005'],
-        sport: 'badminton',
-        wins: 8,
-        losses: 1,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-    }
-);
+// ─── CRUD Operations (PostgreSQL via Drizzle) ────────────────────────────────
 
-let teamIdCounter = 3;
-const generateTeamId = (): string => {
-    return `team-${String(teamIdCounter++).padStart(3, '0')}`;
-};
-
-// CRUD operations
-export const createTeam = (data: {
+export const createTeam = async (data: {
     name: string;
     captainId: string;
     sport: string;
-}): Team => {
-    // Check if captain already has a team in this sport
-    const existingTeam = teams.find(
-        (t) => t.sport === data.sport && (t.captainId === data.captainId || t.memberIds.includes(data.captainId))
-    );
+}): Promise<Team> => {
+    // Check if captain already has a team in this sport (unique constraint will also catch this)
+    const [existing] = await db
+        .select()
+        .from(teams)
+        .where(
+            and(
+                eq(teams.captainId, data.captainId),
+                eq(teams.sport, data.sport)
+            )
+        )
+        .limit(1);
 
-    if (existingTeam) {
+    if (existing) {
         throw new Error('User already has a team in this sport');
     }
 
-    const team: Team = {
-        id: generateTeamId(),
-        name: data.name,
-        captainId: data.captainId,
-        memberIds: [data.captainId], // Captain is automatically a member
-        sport: data.sport,
-        wins: 0,
-        losses: 0,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-    };
-    teams.push(team);
+    const [team] = await db
+        .insert(teams)
+        .values({
+            name: data.name,
+            captainId: data.captainId,
+            memberIds: [data.captainId], // Captain is automatically a member
+            sport: data.sport,
+            wins: 0,
+            losses: 0,
+        })
+        .returning();
+
+    console.log(`✅ Team created in DB: ${team.id} (${team.name})`);
     return team;
 };
 
-export const findTeamById = (id: string): Team | undefined => {
-    return teams.find((t) => t.id === id);
+export const findTeamById = async (id: string): Promise<Team | undefined> => {
+    const [team] = await db
+        .select()
+        .from(teams)
+        .where(eq(teams.id, id))
+        .limit(1);
+
+    return team;
 };
 
-export const getAllTeams = (filters?: { sport?: string }): Team[] => {
-    let filtered = teams;
-
+export const getAllTeams = async (filters?: {
+    sport?: string;
+}): Promise<Team[]> => {
     if (filters?.sport) {
-        filtered = filtered.filter((t) => t.sport.toLowerCase() === filters.sport?.toLowerCase());
+        return db
+            .select()
+            .from(teams)
+            .where(ilike(teams.sport, filters.sport));
     }
 
-    return filtered;
+    return db.select().from(teams);
 };
 
-export const updateTeam = (id: string, data: Partial<Pick<Team, 'name' | 'wins' | 'losses'>>): Team | null => {
-    const teamIndex = teams.findIndex((t) => t.id === id);
-    if (teamIndex === -1) return null;
+export const updateTeam = async (
+    id: string,
+    data: Partial<Pick<TeamInsert, 'name' | 'wins' | 'losses'>>
+): Promise<Team | null> => {
+    const [updated] = await db
+        .update(teams)
+        .set({
+            ...data,
+            updatedAt: new Date(),
+        })
+        .where(eq(teams.id, id))
+        .returning();
 
-    teams[teamIndex] = {
-        ...teams[teamIndex],
-        ...data,
-        updatedAt: new Date(),
-    };
-    return teams[teamIndex];
+    return updated ?? null;
 };
 
-export const deleteTeam = (id: string): boolean => {
-    const index = teams.findIndex((t) => t.id === id);
-    if (index === -1) return false;
-    teams.splice(index, 1);
-    return true;
+export const deleteTeam = async (id: string): Promise<boolean> => {
+    const result = await db.delete(teams).where(eq(teams.id, id)).returning();
+    return result.length > 0;
 };
 
-// Member management
-export const addTeamMember = (teamId: string, userId: string): Team | null => {
-    const team = findTeamById(teamId);
+// ─── Member Management ───────────────────────────────────────────────────────
+
+export const addTeamMember = async (
+    teamId: string,
+    userId: string
+): Promise<Team | null> => {
+    const team = await findTeamById(teamId);
     if (!team) return null;
 
     if (team.memberIds.includes(userId)) {
@@ -107,38 +102,60 @@ export const addTeamMember = (teamId: string, userId: string): Team | null => {
     }
 
     // Check if user already has a team in this sport
-    const userTeam = teams.find(
-        (t) => t.sport === team.sport && t.id !== teamId && t.memberIds.includes(userId)
+    const allTeams = await db.select().from(teams).where(eq(teams.sport, team.sport));
+    const userTeam = allTeams.find(
+        (t) => t.id !== teamId && t.memberIds.includes(userId)
     );
 
     if (userTeam) {
         throw new Error('User already belongs to another team in this sport');
     }
 
-    team.memberIds.push(userId);
-    team.updatedAt = new Date();
-    return team;
+    const [updated] = await db
+        .update(teams)
+        .set({
+            memberIds: [...team.memberIds, userId],
+            updatedAt: new Date(),
+        })
+        .where(eq(teams.id, teamId))
+        .returning();
+
+    return updated ?? null;
 };
 
-export const removeTeamMember = (teamId: string, userId: string): Team | null => {
-    const team = findTeamById(teamId);
+export const removeTeamMember = async (
+    teamId: string,
+    userId: string
+): Promise<Team | null> => {
+    const team = await findTeamById(teamId);
     if (!team) return null;
 
     if (userId === team.captainId) {
-        throw new Error('Cannot remove team captain. Transfer captaincy first or delete the team');
+        throw new Error(
+            'Cannot remove team captain. Transfer captaincy first or delete the team'
+        );
     }
 
-    const index = team.memberIds.indexOf(userId);
-    if (index === -1) {
+    if (!team.memberIds.includes(userId)) {
         throw new Error('User is not a member of this team');
     }
 
-    team.memberIds.splice(index, 1);
-    team.updatedAt = new Date();
-    return team;
+    const [updated] = await db
+        .update(teams)
+        .set({
+            memberIds: team.memberIds.filter((id) => id !== userId),
+            updatedAt: new Date(),
+        })
+        .where(eq(teams.id, teamId))
+        .returning();
+
+    return updated ?? null;
 };
 
-export const isTeamCaptain = (teamId: string, userId: string): boolean => {
-    const team = findTeamById(teamId);
+export const isTeamCaptain = async (
+    teamId: string,
+    userId: string
+): Promise<boolean> => {
+    const team = await findTeamById(teamId);
     return team?.captainId === userId;
 };

@@ -56,11 +56,11 @@ export default function Register() {
         return Object.keys(newErrors).length === 0;
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
 
         if (validateForm()) {
-            const result = registerUser(formData.fullName, formData.email, formData.password);
+            const result = await registerUser(formData.fullName, formData.email, formData.password);
             if (result.success) {
                 setMessage({ type: 'success', text: 'Registration successful! Redirecting...' });
             } else {

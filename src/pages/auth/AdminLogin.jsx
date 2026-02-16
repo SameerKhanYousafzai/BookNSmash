@@ -36,11 +36,11 @@ export default function AdminLogin() {
         return Object.keys(newErrors).length === 0;
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
 
         if (validateForm()) {
-            const result = loginAdmin(formData.email, formData.password);
+            const result = await loginAdmin(formData.email, formData.password);
             if (result.success) {
                 setMessage({ type: 'success', text: 'Admin login successful! Redirecting...' });
             } else {
@@ -82,8 +82,8 @@ export default function AdminLogin() {
                     {message.text && (
                         <div
                             className={`mb-6 p-4 rounded-lg flex items-start space-x-3 ${message.type === 'success'
-                                    ? 'bg-green-900/50 text-green-300 border border-green-700'
-                                    : 'bg-red-900/50 text-red-300 border border-red-700'
+                                ? 'bg-green-900/50 text-green-300 border border-green-700'
+                                : 'bg-red-900/50 text-red-300 border border-red-700'
                                 }`}
                         >
                             {message.type === 'success' ? (

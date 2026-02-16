@@ -2,15 +2,17 @@ import { Link } from 'react-router-dom';
 import { ArrowRight, Calendar, Users, Trophy, MapPin } from 'lucide-react';
 import Button from '../components/common/Button';
 import Card from '../components/common/Card';
-import { sportsCategories, upcomingEvents } from '../data/mockData';
+import { sportsCategories } from '../data/mockData';
+import { useData } from '../context/DataContext';
 import { useState } from 'react';
 
 export default function Home() {
+    const { events } = useData();
     const [selectedSport, setSelectedSport] = useState(null);
 
     const filteredEvents = selectedSport
-        ? upcomingEvents.filter(event => event.sport === selectedSport)
-        : upcomingEvents;
+        ? events.filter(event => event.sport === selectedSport)
+        : events;
 
     return (
         <div className="space-y-16 pb-16">

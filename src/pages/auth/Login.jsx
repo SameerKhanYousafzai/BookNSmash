@@ -32,11 +32,11 @@ export default function Login() {
         return Object.keys(newErrors).length === 0;
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
 
         if (validateForm()) {
-            const result = loginUser(formData.email, formData.password);
+            const result = await loginUser(formData.email, formData.password);
             if (result.success) {
                 setMessage({ type: 'success', text: 'Login successful! Redirecting...' });
             } else {
