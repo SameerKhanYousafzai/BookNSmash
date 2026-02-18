@@ -5,19 +5,20 @@ import Button from '../../components/common/Button';
 import Card from '../../components/common/Card';
 import Modal from '../../components/common/Modal';
 import FormInput from '../../components/common/FormInput';
-import { players, sportsCategories } from '../../data/mockData';
+import { useData } from '../../context/DataContext';
 
 export default function PlayerProfile() {
     const { id } = useParams();
     const navigate = useNavigate();
+    const { players, loading, sportsCategories } = useData();
     const [isEditing, setIsEditing] = useState(false);
     const [showPhotoModal, setShowPhotoModal] = useState(false);
     const [previewImage, setPreviewImage] = useState(null);
     const [isDragging, setIsDragging] = useState(false);
     const fileInputRef = useRef(null);
 
-    // Mock player data - in real app, would fetch from API
-    const player = id === 'new' ? null : players.find(p => p.id === parseInt(id));
+    // Find player from context - handle UUID and new profiles
+    const player = id === 'new' ? null : (players || []).find(p => String(p.id) === String(id));
 
     const [formData, setFormData] = useState(player || {
         name: '',
@@ -31,6 +32,13 @@ export default function PlayerProfile() {
         winRate: 0,
     });
 
+    // Update form data if player data is loaded later
+    useEffect(() => {
+        if (player && !isEditing) {
+            setFormData(player);
+        }
+    }, [player, isEditing]);
+
     const [errors, setErrors] = useState({});
 
     const skillLevels = ['Beginner', 'Intermediate', 'Advanced', 'Professional'];
@@ -43,7 +51,7 @@ export default function PlayerProfile() {
         else if (!/\S+@\S+\.\S+/.test(formData.email)) newErrors.email = 'Email is invalid';
         if (!formData.bio) newErrors.bio = 'Bio is required';
         if (formData.bio && formData.bio.length < 20) newErrors.bio = 'Bio must be at least 20 characters';
-        if (formData.sports.length === 0) newErrors.sports = 'Select at least one sport';
+        if (!formData.sports || formData.sports.length === 0) newErrors.sports = 'Select at least one sport';
 
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
@@ -51,7 +59,7 @@ export default function PlayerProfile() {
 
     const handleSave = () => {
         if (validateForm()) {
-            // Mock save
+            // Mock save - in real app would call addPlayer/updatePlayer
             alert('Profile saved successfully!');
             setIsEditing(false);
             if (id === 'new') {
@@ -69,9 +77,10 @@ export default function PlayerProfile() {
     };
 
     const toggleSport = (sport) => {
-        const newSports = formData.sports.includes(sport)
-            ? formData.sports.filter(s => s !== sport)
-            : [...formData.sports, sport];
+        const currentSports = formData.sports || [];
+        const newSports = currentSports.includes(sport)
+            ? currentSports.filter(s => s !== sport)
+            : [...currentSports, sport];
         setFormData({ ...formData, sports: newSports });
         if (errors.sports) {
             setErrors({ ...errors, sports: '' });
@@ -157,6 +166,15 @@ export default function PlayerProfile() {
         setIsDragging(false);
     };
 
+    if (loading.players && !player && id !== 'new') {
+        return (
+            <div className="container-custom py-32 flex flex-col items-center justify-center space-y-4">
+                <User className="w-12 h-12 text-primary-600 animate-pulse" />
+                <p className="text-gray-600 font-medium">Loading player profile...</p>
+            </div>
+        );
+    }
+
     if (!player && id !== 'new') {
         return (
             <div className="container-custom py-16 text-center">
@@ -211,7 +229,7 @@ export default function PlayerProfile() {
                                 <p className="text-gray-600 mb-4">{formData.skillLevel}</p>
 
                                 <div className="flex flex-wrap gap-2 justify-center mb-6">
-                                    {formData.sports.map((sport, idx) => (
+                                    {(formData.sports || []).map((sport, idx) => (
                                         <span
                                             key={idx}
                                             className="px-3 py-1 bg-primary-50 text-primary-700 rounded-full text-sm font-semibold"
@@ -223,11 +241,11 @@ export default function PlayerProfile() {
 
                                 <div className="grid grid-cols-2 gap-4 mb-6">
                                     <div className="bg-gray-50 rounded-lg p-4">
-                                        <div className="text-3xl font-bold text-gray-900">{formData.matchesPlayed}</div>
+                                        <div className="text-3xl font-bold text-gray-900">{formData.matchesPlayed || 0}</div>
                                         <div className="text-sm text-gray-600">Matches</div>
                                     </div>
                                     <div className="bg-gray-50 rounded-lg p-4">
-                                        <div className="text-3xl font-bold text-primary-600">{formData.winRate}%</div>
+                                        <div className="text-3xl font-bold text-primary-600">{formData.winRate || 0}%</div>
                                         <div className="text-sm text-gray-600">Win Rate</div>
                                     </div>
                                 </div>
@@ -260,7 +278,7 @@ export default function PlayerProfile() {
                             {/* About */}
                             <Card className="p-6">
                                 <h3 className="text-xl font-bold text-gray-900 mb-4">About</h3>
-                                <p className="text-gray-700 leading-relaxed">{formData.bio}</p>
+                                <p className="text-gray-700 leading-relaxed">{formData.bio || 'No bio provided'}</p>
                             </Card>
 
                             {/* Stats */}
@@ -272,7 +290,7 @@ export default function PlayerProfile() {
                                             <Trophy className="w-6 h-6 text-blue-600" />
                                         </div>
                                         <div>
-                                            <div className="text-2xl font-bold text-gray-900">12</div>
+                                            <div className="text-2xl font-bold text-gray-900">0</div>
                                             <div className="text-sm text-gray-600">Tournaments</div>
                                         </div>
                                     </div>
@@ -281,7 +299,7 @@ export default function PlayerProfile() {
                                             <Target className="w-6 h-6 text-green-600" />
                                         </div>
                                         <div>
-                                            <div className="text-2xl font-bold text-gray-900">8</div>
+                                            <div className="text-2xl font-bold text-gray-900">0</div>
                                             <div className="text-sm text-gray-600">Wins</div>
                                         </div>
                                     </div>
@@ -290,7 +308,7 @@ export default function PlayerProfile() {
                                             <TrendingUp className="w-6 h-6 text-purple-600" />
                                         </div>
                                         <div>
-                                            <div className="text-2xl font-bold text-gray-900">1250</div>
+                                            <div className="text-2xl font-bold text-gray-900">1200</div>
                                             <div className="text-sm text-gray-600">Rating</div>
                                         </div>
                                     </div>
@@ -300,22 +318,8 @@ export default function PlayerProfile() {
                             {/* Recent Activity */}
                             <Card className="p-6">
                                 <h3 className="text-xl font-bold text-gray-900 mb-4">Recent Activity</h3>
-                                <div className="space-y-4">
-                                    {[
-                                        { event: 'Won Tennis Match', date: '2 days ago', icon: Trophy },
-                                        { event: 'Joined Basketball Tournament', date: '5 days ago', icon: Calendar },
-                                        { event: 'Completed Badminton Match', date: '1 week ago', icon: Target },
-                                    ].map((activity, idx) => (
-                                        <div key={idx} className="flex items-start gap-3 pb-4 border-b border-gray-100 last:border-0">
-                                            <div className="w-10 h-10 bg-primary-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                                                <activity.icon className="w-5 h-5 text-primary-600" />
-                                            </div>
-                                            <div className="flex-1">
-                                                <div className="font-semibold text-gray-900">{activity.event}</div>
-                                                <div className="text-sm text-gray-600">{activity.date}</div>
-                                            </div>
-                                        </div>
-                                    ))}
+                                <div className="text-center py-8 text-gray-500 italic">
+                                    No recent activity to show.
                                 </div>
                             </Card>
                         </>
@@ -352,7 +356,7 @@ export default function PlayerProfile() {
                                     name="phone"
                                     value={formData.phone}
                                     onChange={handleChange}
-                                    placeholder="+1 (555) 000-0000"
+                                    placeholder="+92 3XX XXXXXXX"
                                 />
 
                                 <div>
@@ -376,12 +380,12 @@ export default function PlayerProfile() {
                                         Sports <span className="text-red-500">*</span>
                                     </label>
                                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                                        {sportsCategories.map(sport => (
+                                        {(sportsCategories || []).map(sport => (
                                             <button
                                                 key={sport.id}
                                                 type="button"
                                                 onClick={() => toggleSport(sport.name)}
-                                                className={`p-3 rounded-lg border-2 transition-all ${formData.sports.includes(sport.name)
+                                                className={`p-3 rounded-lg border-2 transition-all ${(formData.sports || []).includes(sport.name)
                                                     ? 'border-primary-500 bg-primary-50 text-primary-700'
                                                     : 'border-gray-200 hover:border-gray-300'
                                                     }`}
@@ -409,7 +413,7 @@ export default function PlayerProfile() {
                                     />
                                     {errors.bio && <p className="mt-1 text-sm text-red-500">{errors.bio}</p>}
                                     <p className="mt-1 text-sm text-gray-500">
-                                        {formData.bio.length}/500 characters (minimum 20)
+                                        {(formData.bio || '').length}/500 characters (minimum 20)
                                     </p>
                                 </div>
 

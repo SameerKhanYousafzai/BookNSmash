@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Edit2, Trash2, Search, User } from 'lucide-react';
+import { Plus, Edit2, Trash2, Search, User, Loader2, AlertCircle } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import Card from '../../components/common/Card';
 import Button from '../../components/common/Button';
@@ -10,7 +10,8 @@ import Button from '../../components/common/Button';
  * Full CRUD operations: Create, Read, Update, Delete
  */
 export default function PlayerManager() {
-    const { players, addPlayer, updatePlayer, deletePlayer } = useData();
+    // players state is initialized in DataContext as []
+    const { players = [], addPlayer, updatePlayer, deletePlayer, loading = {}, error: dataError } = useData();
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [editingPlayer, setEditingPlayer] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
@@ -24,10 +25,32 @@ export default function PlayerManager() {
         avatar: '',
     });
 
-    // Filter players based on search
-    const filteredPlayers = players.filter(player =>
-        player.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        player.sports.some(sport => sport.toLowerCase().includes(searchTerm.toLowerCase()))
+    // Handle loading state
+    if (loading.players) {
+        return (
+            <div className="container-custom py-16 flex flex-col items-center justify-center space-y-4">
+                <Loader2 className="w-12 h-12 text-primary-600 animate-spin" />
+                <p className="text-gray-600 font-medium">Loading players...</p>
+            </div>
+        );
+    }
+
+    // Handle error state
+    if (dataError && !players.length) {
+        return (
+            <div className="container-custom py-16 text-center">
+                <AlertCircle className="w-16 h-16 mx-auto text-red-500 mb-4" />
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">Error Loading Players</h2>
+                <p className="text-gray-600 mb-6">{dataError}</p>
+                <Button onClick={() => window.location.reload()}>Retry</Button>
+            </div>
+        );
+    }
+
+    // Filter players based on search (safely handle undefined player.sports)
+    const filteredPlayers = (players || []).filter(player =>
+        (player.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (player.sports || []).some(sport => sport.toLowerCase().includes(searchTerm.toLowerCase()))
     );
 
     // Handle form input changes
@@ -64,45 +87,57 @@ export default function PlayerManager() {
     const handleEdit = (player) => {
         setEditingPlayer(player);
         setFormData({
-            name: player.name,
-            sports: player.sports,
-            skillLevel: player.skillLevel,
-            matchesPlayed: player.matchesPlayed,
-            winRate: player.winRate,
-            bio: player.bio,
-            avatar: player.avatar,
+            name: player.name || '',
+            sports: player.sports || [],
+            skillLevel: player.skillLevel || 'Beginner',
+            matchesPlayed: player.matchesPlayed || 0,
+            winRate: player.winRate || 0,
+            bio: player.bio || '',
+            avatar: player.avatar || '',
         });
         setIsFormOpen(true);
     };
 
     // Handle form submission
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-
-        if (editingPlayer) {
-            // Update existing player
-            updatePlayer({
-                ...editingPlayer,
-                ...formData,
-                sports: Array.isArray(formData.sports) ? formData.sports : formData.sports.split(',').map(s => s.trim()),
-            });
-        } else {
-            // Create new player
-            addPlayer({
-                id: Date.now(),
-                ...formData,
-                sports: Array.isArray(formData.sports) ? formData.sports : formData.sports.split(',').map(s => s.trim()),
-            });
+        try {
+            if (editingPlayer) {
+                // Update existing player
+                if (updatePlayer) {
+                    await updatePlayer({
+                        ...editingPlayer,
+                        ...formData,
+                        sports: Array.isArray(formData.sports) ? formData.sports : formData.sports.split(',').map(s => s.trim()),
+                    });
+                }
+            } else {
+                // Create new player
+                if (addPlayer) {
+                    await addPlayer({
+                        id: Date.now(),
+                        ...formData,
+                        sports: Array.isArray(formData.sports) ? formData.sports : formData.sports.split(',').map(s => s.trim()),
+                    });
+                }
+            }
+            setIsFormOpen(false);
+            setEditingPlayer(null);
+        } catch (error) {
+            alert('Failed to save player: ' + error.message);
         }
-
-        setIsFormOpen(false);
-        setEditingPlayer(null);
     };
 
     // Handle delete
-    const handleDelete = (id) => {
+    const handleDelete = async (id) => {
         if (window.confirm('Are you sure you want to delete this player profile?')) {
-            deletePlayer(id);
+            try {
+                if (deletePlayer) {
+                    await deletePlayer(id);
+                }
+            } catch (error) {
+                alert('Failed to delete player: ' + error.message);
+            }
         }
     };
 
@@ -136,68 +171,73 @@ export default function PlayerManager() {
                 </div>
             </Card>
 
-            {/* Players List */}
+            {/* Players List - Safe mapping with optional chaining */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredPlayers.map((player) => (
-                    <Card key={player.id} className="p-6">
-                        <div className="flex items-start justify-between mb-4">
-                            <div className="flex items-center gap-3">
-                                <img
-                                    src={player.avatar}
-                                    alt={player.name}
-                                    className="w-12 h-12 rounded-full object-cover"
-                                />
-                                <div>
-                                    <h3 className="font-bold text-gray-900">{player.name}</h3>
-                                    <p className="text-sm text-gray-600">{player.skillLevel}</p>
+                {filteredPlayers.length > 0 ? (
+                    filteredPlayers.map((player) => (
+                        <Card key={player.id} className="p-6">
+                            <div className="flex items-start justify-between mb-4">
+                                <div className="flex items-center gap-3">
+                                    <img
+                                        src={player.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(player.name)}`}
+                                        alt={player.name}
+                                        className="w-12 h-12 rounded-full object-cover"
+                                    />
+                                    <div>
+                                        <h3 className="font-bold text-gray-900">{player.name}</h3>
+                                        <p className="text-sm text-gray-600">{player.skillLevel}</p>
+                                    </div>
+                                </div>
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={() => handleEdit(player)}
+                                        className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                    >
+                                        <Edit2 className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                        onClick={() => handleDelete(player.id)}
+                                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                    >
+                                        <Trash2 className="w-4 h-4" />
+                                    </button>
                                 </div>
                             </div>
-                            <div className="flex gap-2">
-                                <button
-                                    onClick={() => handleEdit(player)}
-                                    className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                                >
-                                    <Edit2 className="w-4 h-4" />
-                                </button>
-                                <button
-                                    onClick={() => handleDelete(player.id)}
-                                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                >
-                                    <Trash2 className="w-4 h-4" />
-                                </button>
-                            </div>
-                        </div>
 
-                        <div className="space-y-2 text-sm">
-                            <div className="flex flex-wrap gap-1">
-                                {player.sports.map((sport, idx) => (
-                                    <span
-                                        key={idx}
-                                        className="px-2 py-1 bg-primary-50 text-primary-700 rounded-full text-xs font-semibold"
-                                    >
-                                        {sport}
-                                    </span>
-                                ))}
+                            <div className="space-y-2 text-sm">
+                                <div className="flex flex-wrap gap-1">
+                                    {player.sports?.map((sport, idx) => (
+                                        <span
+                                            key={idx}
+                                            className="px-2 py-1 bg-primary-50 text-primary-700 rounded-full text-xs font-semibold"
+                                        >
+                                            {sport}
+                                        </span>
+                                    ))}
+                                    {(!player.sports || player.sports.length === 0) && (
+                                        <span className="text-gray-400 text-xs italic">No sports listed</span>
+                                    )}
+                                </div>
+                                <div className="flex justify-between text-gray-600">
+                                    <span>Matches: {player.matchesPlayed || 0}</span>
+                                    <span>Win Rate: {player.winRate || 0}%</span>
+                                </div>
+                                {player.bio && (
+                                    <p className="text-gray-600 text-xs line-clamp-2">{player.bio}</p>
+                                )}
                             </div>
-                            <div className="flex justify-between text-gray-600">
-                                <span>Matches: {player.matchesPlayed}</span>
-                                <span>Win Rate: {player.winRate}%</span>
-                            </div>
-                            {player.bio && (
-                                <p className="text-gray-600 text-xs line-clamp-2">{player.bio}</p>
-                            )}
-                        </div>
-                    </Card>
-                ))}
+                        </Card>
+                    ))
+                ) : (
+                    <div className="col-span-full">
+                        <Card className="p-12 text-center">
+                            <User className="w-16 h-16 mx-auto text-gray-300 mb-4" />
+                            <h3 className="text-xl font-semibold text-gray-900 mb-2">No players found</h3>
+                            <p className="text-gray-600">Try adjusting your search or add a new player</p>
+                        </Card>
+                    </div>
+                )}
             </div>
-
-            {filteredPlayers.length === 0 && (
-                <Card className="p-12 text-center">
-                    <User className="w-16 h-16 mx-auto text-gray-300 mb-4" />
-                    <h3 className="text-xl font-semibold text-gray-900 mb-2">No players found</h3>
-                    <p className="text-gray-600">Try adjusting your search or add a new player</p>
-                </Card>
-            )}
 
             {/* Form Modal */}
             {isFormOpen && (

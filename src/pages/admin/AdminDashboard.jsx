@@ -1,21 +1,36 @@
-import { useState } from 'react';
-import { Users, Calendar, Trophy, DollarSign, TrendingUp, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Users, Calendar, Trophy, DollarSign, TrendingUp, CheckCircle, XCircle, Clock, Loader2 } from 'lucide-react';
 import Button from '../../components/common/Button';
 import Card from '../../components/common/Card';
 import Modal from '../../components/common/Modal';
+import { formatCurrency } from '../../utils/currency';
+import api from '../../services/api';
 
 export default function AdminDashboard() {
     const [showApprovalModal, setShowApprovalModal] = useState(false);
     const [selectedRegistration, setSelectedRegistration] = useState(null);
+    const [stats, setStats] = useState(null);
+    const [loading, setLoading] = useState(true);
 
-    // Mock dashboard data
-    const stats = [
-        { label: 'Total Users', value: '10,234', change: '+12%', icon: Users, color: 'blue' },
-        { label: 'Active Events', value: '48', change: '+5%', icon: Calendar, color: 'green' },
-        { label: 'Total Revenue', value: '$45,678', change: '+18%', icon: DollarSign, color: 'purple' },
-        { label: 'Tournaments', value: '23', change: '+8%', icon: Trophy, color: 'orange' },
-    ];
+    useEffect(() => {
+        const fetchStats = async () => {
+            try {
+                const res = await api.get('/admin/dashboard/stats');
+                if (res.ok) {
+                    const data = await res.json();
+                    setStats(data);
+                }
+            } catch (error) {
+                console.error('❌ Failed to fetch admin stats:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
 
+        fetchStats();
+    }, []);
+
+    // Mock pending registrations for now (until a real endpoint for just pending ones is needed)
     const pendingRegistrations = [
         { id: 1, event: 'Summer Tennis Championship', user: 'Sameer Khan', date: '2025-01-10', status: 'pending' },
         { id: 2, event: 'Basketball League Finals', user: 'Sarah Smith', date: '2025-01-11', status: 'pending' },
@@ -35,6 +50,22 @@ export default function AdminDashboard() {
         setSelectedRegistration(null);
     };
 
+    if (loading) {
+        return (
+            <div className="container-custom py-16 flex flex-col items-center justify-center space-y-4">
+                <Loader2 className="w-12 h-12 text-primary-600 animate-spin" />
+                <p className="text-gray-600 font-medium">Loading dashboard stats...</p>
+            </div>
+        );
+    }
+
+    const statCards = [
+        { label: 'Total Users', value: stats?.totalUsers?.toLocaleString() || '0', change: '+12%', icon: Users, color: 'blue' },
+        { label: 'Active Events', value: stats?.activeEvents?.toLocaleString() || '0', change: '+5%', icon: Calendar, color: 'green' },
+        { label: 'Total Revenue', value: formatCurrency(stats?.totalRevenue || 0), change: '+18%', icon: DollarSign, color: 'purple' },
+        { label: 'Teams', value: stats?.totalTeams?.toLocaleString() || '0', change: '+8%', icon: Trophy, color: 'orange' },
+    ];
+
     return (
         <div className="container-custom py-8 space-y-8">
             {/* Header */}
@@ -47,7 +78,7 @@ export default function AdminDashboard() {
 
             {/* Stats Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                {stats.map((stat, idx) => (
+                {statCards.map((stat, idx) => (
                     <Card key={idx} className="p-6 hover:shadow-xl transition-all">
                         <div className="flex items-start justify-between mb-4">
                             <div className={`w-12 h-12 bg-${stat.color}-100 rounded-xl flex items-center justify-center`}>
@@ -150,19 +181,19 @@ export default function AdminDashboard() {
             <Card className="p-6">
                 <h2 className="text-xl font-bold text-gray-900 mb-6">Quick Actions</h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <Button variant="primary" className="justify-center">
+                    <Button variant="primary" className="justify-center" onClick={() => window.location.href = '/admin/events'}>
                         <Calendar className="w-5 h-5 mr-2" />
                         Create Event
                     </Button>
-                    <Button variant="outline" className="justify-center">
+                    <Button variant="outline" className="justify-center" onClick={() => window.location.href = '/admin/players'}>
                         <Users className="w-5 h-5 mr-2" />
                         Manage Users
                     </Button>
-                    <Button variant="outline" className="justify-center">
+                    <Button variant="outline" className="justify-center" onClick={() => window.location.href = '/admin/registrations'}>
                         <Trophy className="w-5 h-5 mr-2" />
                         View Reports
                     </Button>
-                    <Button variant="outline" className="justify-center">
+                    <Button variant="outline" className="justify-center" onClick={() => window.location.href = '/admin/weekly'}>
                         <DollarSign className="w-5 h-5 mr-2" />
                         Financial Overview
                     </Button>

@@ -3,17 +3,36 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Star, ShoppingCart, Check, ChevronLeft, ChevronRight, Package, Truck, Shield } from 'lucide-react';
 import Button from '../../components/common/Button';
 import Card from '../../components/common/Card';
-import { products } from '../../data/mockData';
+import { useData } from '../../context/DataContext';
+import { formatCurrencyDecimal } from '../../utils/currency';
 
 export default function ProductDetail() {
     const { id } = useParams();
     const navigate = useNavigate();
-    const product = products.find(p => p.id === parseInt(id));
+    const { products, loading } = useData();
+    const product = products.find(p => p.id === id);
 
     const [selectedSize, setSelectedSize] = useState('');
     const [selectedColor, setSelectedColor] = useState('');
     const [quantity, setQuantity] = useState(1);
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
+
+    if (loading.products) {
+        return (
+            <div className="pb-16 animate-pulse">
+                <div className="bg-gray-100 h-12 w-full mb-8" />
+                <div className="container-custom grid grid-cols-1 lg:grid-cols-2 gap-12">
+                    <div className="h-[500px] bg-gray-100 rounded-2xl" />
+                    <div className="space-y-6">
+                        <div className="h-10 w-3/4 bg-gray-100 rounded" />
+                        <div className="h-6 w-1/4 bg-gray-100 rounded" />
+                        <div className="h-12 w-1/3 bg-gray-100 rounded" />
+                        <div className="h-32 w-full bg-gray-100 rounded" />
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     if (!product) {
         return (
@@ -29,20 +48,29 @@ export default function ProductDetail() {
         );
     }
 
+    // Combine singular image and images array for the gallery
+    const allImages = product.images?.length > 0
+        ? product.images
+        : (product.image ? [product.image] : []);
+
     const nextImage = () => {
-        setCurrentImageIndex((prev) => (prev + 1) % product.images.length);
+        setCurrentImageIndex((prev) => (prev + 1) % allImages.length);
     };
 
     const prevImage = () => {
-        setCurrentImageIndex((prev) => (prev - 1 + product.images.length) % product.images.length);
+        setCurrentImageIndex((prev) => (prev - 1 + allImages.length) % allImages.length);
     };
 
     const handleAddToCart = () => {
-        if (product.sizes.length > 0 && !selectedSize) {
+        // Safe check for properties that might missing in DB but expected by UI
+        const sizes = product.sizes || [];
+        const colors = product.colors || [];
+
+        if (sizes.length > 0 && !selectedSize) {
             alert('Please select a size');
             return;
         }
-        if (product.colors.length > 0 && !selectedColor) {
+        if (colors.length > 0 && !selectedColor) {
             alert('Please select a color');
             return;
         }
@@ -73,13 +101,19 @@ export default function ProductDetail() {
                     {/* Product Images */}
                     <div>
                         <div className="relative h-96 sm:h-[500px] rounded-2xl overflow-hidden bg-gray-100 mb-4">
-                            <img
-                                src={product.images[currentImageIndex]}
-                                alt={`${product.name} - Image ${currentImageIndex + 1}`}
-                                className="w-full h-full object-cover"
-                            />
+                            {allImages.length > 0 ? (
+                                <img
+                                    src={allImages[currentImageIndex]}
+                                    alt={`${product.name} - Image ${currentImageIndex + 1}`}
+                                    className="w-full h-full object-cover"
+                                />
+                            ) : (
+                                <div className="w-full h-full flex items-center justify-center bg-gray-200">
+                                    <Package className="w-16 h-16 text-gray-400" />
+                                </div>
+                            )}
 
-                            {product.images.length > 1 && (
+                            {allImages.length > 1 && (
                                 <>
                                     <button
                                         onClick={prevImage}
@@ -98,9 +132,9 @@ export default function ProductDetail() {
                         </div>
 
                         {/* Thumbnail Gallery */}
-                        {product.images.length > 1 && (
+                        {allImages.length > 1 && (
                             <div className="grid grid-cols-4 gap-4">
-                                {product.images.map((image, idx) => (
+                                {allImages.map((image, idx) => (
                                     <button
                                         key={idx}
                                         onClick={() => setCurrentImageIndex(idx)}
@@ -149,7 +183,7 @@ export default function ProductDetail() {
                         </div>
 
                         <div className="text-4xl font-bold text-primary-600 mb-6">
-                            PKR {product.price.toFixed(2)}
+                            {formatCurrencyDecimal(product.price)}
                         </div>
 
                         <p className="text-gray-700 leading-relaxed mb-8">
@@ -250,7 +284,7 @@ export default function ProductDetail() {
                                     <Truck className="w-6 h-6 text-primary-600 flex-shrink-0 mt-1" />
                                     <div>
                                         <div className="font-semibold text-gray-900">Free Shipping</div>
-                                        <div className="text-sm text-gray-600">On orders over PKR 50</div>
+                                        <div className="text-sm text-gray-600">On orders over Rs 5,000</div>
                                     </div>
                                 </div>
                                 <div className="flex items-start gap-3">

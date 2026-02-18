@@ -18,14 +18,17 @@ router.get('/', async (req: Request, res: Response) => {
     try {
         const { sport, location } = req.query;
 
-        const venues = await getAllVenues({
+        const currentVenues = await getAllVenues({
             sport: sport as string,
             location: location as string,
         });
 
+        console.log(`🏢 [GET /api/venues] Found ${currentVenues.length} venues in database`);
+
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
         res.json({
-            venues,
-            total: venues.length,
+            venues: currentVenues,
+            total: currentVenues.length,
         });
     } catch (error) {
         console.error('❌ Failed to fetch venues:', error);
@@ -61,6 +64,7 @@ router.get('/:id', async (req: Request, res: Response) => {
 // POST /api/venues - Create venue (admin only)
 router.post('/', authenticate, requireRole('ADMIN'), validate(createVenueSchema), async (req: Request, res: Response) => {
     try {
+        console.log('🏢 Received venue creation request:', JSON.stringify(req.body, null, 2));
         const venue = await createVenue(req.body);
 
         res.status(201).json({
@@ -79,6 +83,7 @@ router.post('/', authenticate, requireRole('ADMIN'), validate(createVenueSchema)
 // PUT /api/venues/:id - Update venue (admin only)
 router.put('/:id', authenticate, requireRole('ADMIN'), validate(updateVenueSchema), async (req: Request, res: Response) => {
     try {
+        console.log(`🏢 Updating venue ${req.params.id}:`, JSON.stringify(req.body, null, 2));
         const venue = await updateVenue(req.params.id, req.body);
 
         if (!venue) {

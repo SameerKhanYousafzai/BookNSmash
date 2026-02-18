@@ -213,3 +213,25 @@ export const matches = pgTable('matches', {
     matchDate: timestamp('match_date', { withTimezone: true }).notNull(),
     status: matchStatusEnum('status').default('SCHEDULED').notNull(),
 });
+
+// ─── Products (Shop) ─────────────────────────────────────────────────────────
+
+export const products = pgTable('products', {
+    id: uuid('id').defaultRandom().primaryKey(),
+    name: text('name').notNull(),
+    description: text('description'),
+    category: text('category').notNull(), // Equipment, Apparel, Accessories
+    price: decimal('price', { precision: 10, scale: 2 }).notNull(),
+    stock: integer('stock').default(0).notNull(),
+    image: text('image'),
+    images: text('images').array().notNull().default([]),
+    rating: decimal('rating', { precision: 3, scale: 1 }).default('0.0'),
+    reviews: integer('reviews').default(0),
+    vendor: text('vendor'),
+    createdAt: timestamp('created_at', { withTimezone: true })
+        .defaultNow()
+        .notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+        .defaultNow()
+        .notNull(),
+});

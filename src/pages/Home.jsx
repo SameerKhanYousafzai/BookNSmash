@@ -2,12 +2,12 @@ import { Link } from 'react-router-dom';
 import { ArrowRight, Calendar, Users, Trophy, MapPin } from 'lucide-react';
 import Button from '../components/common/Button';
 import Card from '../components/common/Card';
-import { sportsCategories } from '../data/mockData';
 import { useData } from '../context/DataContext';
+import { formatCurrency } from '../utils/currency';
 import { useState } from 'react';
 
 export default function Home() {
-    const { events } = useData();
+    const { events, loading, sportsCategories } = useData();
     const [selectedSport, setSelectedSport] = useState(null);
 
     const filteredEvents = selectedSport
@@ -171,7 +171,7 @@ export default function Home() {
                                         <div className="pt-4 border-t border-gray-100 text-center">
                                             <span className="text-xs text-gray-500 mr-2">Entry Fee</span>
                                             <span className="text-lg font-bold text-primary-600">
-                                                Rs{event.price}
+                                                {formatCurrency(event.price)}
                                             </span>
                                         </div>
                                     )}

@@ -12,7 +12,10 @@ import authRoutes from './routes/auth';
 import userRoutes from './routes/users';
 import eventRoutes from './routes/events';
 import venueRoutes from './routes/venues';
+import productRoutes from './routes/products';
 import teamRoutes from './routes/teams';
+import matchRoutes from './routes/matches';
+import adminRoutes from './routes/admin';
 
 const app: Application = express();
 
@@ -59,7 +62,10 @@ app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/events', eventRoutes);
 app.use('/api/venues', venueRoutes);
+app.use('/api/products', productRoutes);
 app.use('/api/teams', teamRoutes);
+app.use('/api/matches', matchRoutes);
+app.use('/api/admin/dashboard', adminRoutes);
 
 // 404 handler
 app.use((_req: Request, res: Response) => {

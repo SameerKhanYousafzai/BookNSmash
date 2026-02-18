@@ -1,34 +1,46 @@
 import { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, Calendar, MapPin, Users, DollarSign, Trophy, Clock, CheckCircle, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Calendar, MapPin, Users, DollarSign, Trophy, Clock, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 import Button from '../../components/common/Button';
 import Card from '../../components/common/Card';
 import Modal from '../../components/common/Modal';
 import FormInput from '../../components/common/FormInput';
-import { upcomingEvents } from '../../data/mockData';
+import { useData } from '../../context/DataContext';
+import { useAuth } from '../../context/AuthContext';
+import { formatCurrency } from '../../utils/currency';
+import api from '../../services/api';
 
 export default function EventDetail() {
     const { id } = useParams();
     const navigate = useNavigate();
-    const event = upcomingEvents.find(e => e.id === parseInt(id));
+    const { events, venues, loading } = useData();
+    const { currentUser } = useAuth();
+
+    // Find event with UUID-safe matching
+    const event = (events || []).find(e => String(e.id) === String(id));
+
+    // Find associated venue
+    const venue = (venues || []).find(v => v.id === event?.venueId);
 
     const [showRegistrationModal, setShowRegistrationModal] = useState(false);
-    const [registrationData, setRegistrationData] = useState({
-        name: '',
-        email: '',
-        phone: '',
-        teamName: '',
-        emergencyContact: '',
-    });
-    const [errors, setErrors] = useState({});
+    const [registering, setRegistering] = useState(false);
     const [message, setMessage] = useState({ type: '', text: '' });
+
+    if (loading.events && !event) {
+        return (
+            <div className="container-custom py-32 flex flex-col items-center justify-center space-y-4">
+                <Loader2 className="w-12 h-12 text-primary-600 animate-spin" />
+                <p className="text-gray-600 font-medium">Loading event details...</p>
+            </div>
+        );
+    }
 
     if (!event) {
         return (
             <div className="container-custom py-16 text-center">
                 <Trophy className="w-16 h-16 mx-auto text-gray-300 mb-4" />
                 <h2 className="text-2xl font-bold text-gray-900 mb-2">Event Not Found</h2>
-                <p className="text-gray-600 mb-6">The event you're looking for doesn't exist.</p>
+                <p className="text-gray-600 mb-6">The event you're looking for doesn't exist or has been moved.</p>
                 <Button onClick={() => navigate('/events')}>
                     <ArrowLeft className="w-4 h-4 mr-2" />
                     Back to Events
@@ -71,48 +83,63 @@ export default function EventDetail() {
         { time: '06:00 PM', match: 'Finals', court: 'Main Court' },
     ];
 
-    const validateRegistration = () => {
-        const newErrors = {};
+    // ─── Register for event via backend API ───────────────────────────────────
+    const handleRegister = async () => {
+        if (!currentUser) {
+            setMessage({ type: 'error', text: 'Please log in to register for events.' });
+            return;
+        }
 
-        if (!registrationData.name) newErrors.name = 'Name is required';
-        if (!registrationData.email) newErrors.email = 'Email is required';
-        else if (!/\S+@\S+\.\S+/.test(registrationData.email)) newErrors.email = 'Email is invalid';
-        if (!registrationData.phone) newErrors.phone = 'Phone is required';
-        if (!registrationData.emergencyContact) newErrors.emergencyContact = 'Emergency contact is required';
+        setRegistering(true);
+        setMessage({ type: '', text: '' });
 
-        setErrors(newErrors);
-        return Object.keys(newErrors).length === 0;
-    };
+        try {
+            const res = await api.post(`/events/${event.id}/register`);
+            const data = await res.json();
 
-    const handleRegister = () => {
-        if (validateRegistration()) {
-            setMessage({ type: 'success', text: 'Registration successful! Check your email for confirmation.' });
-            setTimeout(() => {
-                setShowRegistrationModal(false);
-                setMessage({ type: '', text: '' });
-            }, 2000);
+            if (res.status === 201) {
+                setMessage({ type: 'success', text: 'Registration successful! You are now registered for this event.' });
+                setTimeout(() => {
+                    setShowRegistrationModal(false);
+                    setMessage({ type: '', text: '' });
+                }, 2500);
+            } else if (res.status === 409) {
+                setMessage({ type: 'error', text: 'You are already registered for this event.' });
+            } else if (res.status === 400) {
+                setMessage({ type: 'error', text: 'This event is full. No more spots available.' });
+            } else {
+                setMessage({ type: 'error', text: data.message || 'Registration failed. Please try again.' });
+            }
+        } catch (error) {
+            console.error('❌ Registration error:', error);
+            setMessage({ type: 'error', text: 'Network error. Please check your connection and try again.' });
+        } finally {
+            setRegistering(false);
         }
     };
 
-    const handleChange = (e) => {
-        setRegistrationData({
-            ...registrationData,
-            [e.target.name]: e.target.value,
-        });
-        if (errors[e.target.name]) {
-            setErrors({ ...errors, [e.target.name]: '' });
-        }
-    };
+    const participants = event.participantCount || event.participants || 0;
+    const maxParticipants = event.maxParticipants || 50;
+    const spotsRemaining = maxParticipants - participants;
+    const percentFilled = (participants / maxParticipants) * 100;
 
-    const spotsRemaining = event.maxParticipants - event.participants;
-    const percentFilled = (event.participants / event.maxParticipants) * 100;
+    // Handle both field names (legacy vs DB)
+    const eventDate = event.startDate || event.date;
+    const eventTime = event.startDate ? new Date(event.startDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : event.time;
+
+    // Default image based on sport
+    const defaultEventImage = `https://images.unsplash.com/photo-${event.sport?.toLowerCase().includes('tennis') ? '1554068865-24cecd4e34b8' :
+        event.sport?.toLowerCase().includes('basketball') ? '1546519638-68e109498ffc' :
+            event.sport?.toLowerCase().includes('football') ? '1579952363873-27f3bade9f55' :
+                '1554068865-24cecd4e34b8'
+        }?w=1200`;
 
     return (
         <div className="pb-16">
             {/* Hero Section */}
             <div className="relative h-96 bg-gray-900">
                 <img
-                    src={event.image}
+                    src={event.image || defaultEventImage}
                     alt={event.title}
                     className="w-full h-full object-cover opacity-60"
                 />
@@ -128,7 +155,7 @@ export default function EventDetail() {
                             Back to Events
                         </Button>
                         <div className="flex items-center gap-3 mb-4">
-                            <span className={`px-4 py-2 rounded-full text-sm font-semibold ${event.status === 'Open'
+                            <span className={`px-4 py-2 rounded-full text-sm font-semibold ${(event.status === 'Open' || event.status === 'UPCOMING')
                                 ? 'bg-green-500 text-white'
                                 : 'bg-red-500 text-white'
                                 }`}>
@@ -161,12 +188,12 @@ export default function EventDetail() {
                                     <div>
                                         <div className="text-sm text-gray-600">Date</div>
                                         <div className="font-semibold text-gray-900">
-                                            {new Date(event.date).toLocaleDateString('en-US', {
+                                            {eventDate ? new Date(eventDate).toLocaleDateString('en-US', {
                                                 weekday: 'long',
                                                 year: 'numeric',
                                                 month: 'long',
                                                 day: 'numeric'
-                                            })}
+                                            }) : 'TBD'}
                                         </div>
                                     </div>
                                 </div>
@@ -174,14 +201,14 @@ export default function EventDetail() {
                                     <Clock className="w-6 h-6 text-primary-600 flex-shrink-0 mt-1" />
                                     <div>
                                         <div className="text-sm text-gray-600">Time</div>
-                                        <div className="font-semibold text-gray-900">{event.time}</div>
+                                        <div className="font-semibold text-gray-900">{eventTime || 'TBD'}</div>
                                     </div>
                                 </div>
                                 <div className="flex items-start gap-3">
                                     <MapPin className="w-6 h-6 text-primary-600 flex-shrink-0 mt-1" />
                                     <div>
                                         <div className="text-sm text-gray-600">Location</div>
-                                        <div className="font-semibold text-gray-900">{event.location}</div>
+                                        <div className="font-semibold text-gray-900">{venue?.name || event.location || 'TBD'}</div>
                                     </div>
                                 </div>
                                 <div className="flex items-start gap-3">
@@ -189,7 +216,7 @@ export default function EventDetail() {
                                     <div>
                                         <div className="text-sm text-gray-600">Entry Fee</div>
                                         <div className="font-semibold text-gray-900">
-                                            {event.price > 0 ? `$${event.price}` : 'FREE'}
+                                            {parseFloat(event.entryFee || event.price) > 0 ? formatCurrency(event.entryFee || event.price) : 'FREE'}
                                         </div>
                                     </div>
                                 </div>
@@ -256,24 +283,24 @@ export default function EventDetail() {
                                 <div className="flex items-center justify-between mb-2">
                                     <span className="text-sm text-gray-600">Registration</span>
                                     <span className="text-sm font-semibold text-gray-900">
-                                        {event.participants}/{event.maxParticipants}
+                                        {participants}/{maxParticipants}
                                     </span>
                                 </div>
                                 <div className="w-full bg-gray-200 rounded-full h-2">
                                     <div
                                         className="bg-primary-600 h-2 rounded-full transition-all duration-300"
-                                        style={{ width: `${percentFilled}%` }}
+                                        style={{ width: `${Math.min(percentFilled, 100)}%` }}
                                     ></div>
                                 </div>
                                 <p className="text-sm text-gray-600 mt-2">
-                                    {spotsRemaining} {spotsRemaining === 1 ? 'spot' : 'spots'} remaining
+                                    {spotsRemaining > 0 ? `${spotsRemaining} ${spotsRemaining === 1 ? 'spot' : 'spots'} remaining` : 'Event is full'}
                                 </p>
                             </div>
 
-                            {event.price > 0 && (
+                            {parseFloat(event.entryFee || event.price) > 0 && (
                                 <div className="mb-6 pb-6 border-b border-gray-200">
                                     <div className="text-sm text-gray-600 mb-1">Entry Fee</div>
-                                    <div className="text-3xl font-bold text-primary-600">${event.price}</div>
+                                    <div className="text-3xl font-bold text-primary-600">{formatCurrency(event.entryFee || event.price)}</div>
                                 </div>
                             )}
 
@@ -281,9 +308,9 @@ export default function EventDetail() {
                                 variant="primary"
                                 className="w-full mb-4"
                                 onClick={() => setShowRegistrationModal(true)}
-                                disabled={event.status !== 'Open'}
+                                disabled={event.status !== 'Open' && event.status !== 'UPCOMING'}
                             >
-                                {event.status === 'Open' ? 'Register Now' : 'Registration Closed'}
+                                {(event.status === 'Open' || event.status === 'UPCOMING') ? 'Register Now' : 'Registration Closed'}
                             </Button>
 
                             <div className="space-y-3 text-sm">
@@ -305,11 +332,11 @@ export default function EventDetail() {
                 </div>
             </div>
 
-            {/* Registration Modal */}
+            {/* Registration Modal — calls backend API */}
             {showRegistrationModal && (
                 <Modal
                     isOpen={showRegistrationModal}
-                    onClose={() => setShowRegistrationModal(false)}
+                    onClose={() => { setShowRegistrationModal(false); setMessage({ type: '', text: '' }); }}
                     title="Event Registration"
                 >
                     <div className="space-y-4">
@@ -332,67 +359,31 @@ export default function EventDetail() {
                         <div className="bg-gray-50 rounded-lg p-4">
                             <h4 className="font-semibold text-gray-900 mb-2">{event.title}</h4>
                             <div className="text-sm text-gray-600 space-y-1">
-                                <div>{new Date(event.date).toLocaleDateString()} at {event.time}</div>
-                                <div>{event.location}</div>
-                                {event.price > 0 && <div className="font-semibold text-primary-600">Entry Fee: ${event.price}</div>}
+                                <div>{eventDate ? new Date(eventDate).toLocaleDateString() : 'TBD'} {eventTime ? `at ${eventTime}` : ''}</div>
+                                <div>{venue?.name || event.location || 'Location TBD'}</div>
+                                {parseFloat(event.entryFee || event.price) > 0 && <div className="font-semibold text-primary-600">Entry Fee: {formatCurrency(event.entryFee || event.price)}</div>}
                             </div>
                         </div>
 
-                        <FormInput
-                            label="Full Name"
-                            name="name"
-                            value={registrationData.name}
-                            onChange={handleChange}
-                            error={errors.name}
-                            placeholder="Full Name"
-                            required
-                        />
+                        {!currentUser && (
+                            <div className="p-4 bg-yellow-50 text-yellow-800 rounded-lg">
+                                <p className="text-sm font-medium">Please <Link to="/login" className="underline font-bold">log in</Link> to register for this event.</p>
+                            </div>
+                        )}
 
-                        <FormInput
-                            label="Email"
-                            type="email"
-                            name="email"
-                            value={registrationData.email}
-                            onChange={handleChange}
-                            error={errors.email}
-                            placeholder="you@example.com"
-                            required
-                        />
-
-                        <FormInput
-                            label="Phone Number"
-                            type="tel"
-                            name="phone"
-                            value={registrationData.phone}
-                            onChange={handleChange}
-                            error={errors.phone}
-                            placeholder="+1 (555) 000-0000"
-                            required
-                        />
-
-                        <FormInput
-                            label="Team Name (Optional)"
-                            name="teamName"
-                            value={registrationData.teamName}
-                            onChange={handleChange}
-                            placeholder="Leave blank for individual registration"
-                        />
-
-                        <FormInput
-                            label="Emergency Contact"
-                            name="emergencyContact"
-                            value={registrationData.emergencyContact}
-                            onChange={handleChange}
-                            error={errors.emergencyContact}
-                            placeholder="Name and phone number"
-                            required
-                        />
+                        {currentUser && (
+                            <div className="bg-blue-50 rounded-lg p-4">
+                                <p className="text-sm text-blue-800">
+                                    Registering as <span className="font-semibold">{currentUser.name || currentUser.email}</span>
+                                </p>
+                            </div>
+                        )}
 
                         <div className="flex gap-3 pt-4">
                             <Button
                                 variant="ghost"
                                 className="flex-1"
-                                onClick={() => setShowRegistrationModal(false)}
+                                onClick={() => { setShowRegistrationModal(false); setMessage({ type: '', text: '' }); }}
                             >
                                 Cancel
                             </Button>
@@ -400,8 +391,16 @@ export default function EventDetail() {
                                 variant="primary"
                                 className="flex-1"
                                 onClick={handleRegister}
+                                disabled={registering || !currentUser}
                             >
-                                Complete Registration
+                                {registering ? (
+                                    <>
+                                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                        Registering...
+                                    </>
+                                ) : (
+                                    'Confirm Registration'
+                                )}
                             </Button>
                         </div>
                     </div>

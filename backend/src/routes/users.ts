@@ -71,8 +71,8 @@ router.put('/me', authenticate, validate(updateUserSchema), async (req: Request,
     }
 });
 
-// GET /api/users - List all users (admin only)
-router.get('/', authenticate, requireRole('ADMIN'), async (_req: Request, res: Response) => {
+// GET /api/users - List all users (authenticated)
+router.get('/', authenticate, async (_req: Request, res: Response) => {
     try {
         const users = (await getAllUsers()).map(sanitizeUser);
         res.json({

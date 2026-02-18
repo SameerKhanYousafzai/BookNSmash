@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Plus, Edit2, Trash2, Search, Calendar } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Plus, Edit2, Trash2, Search, Calendar, MapPin, Clock, Info, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import Card from '../../components/common/Card';
 import Button from '../../components/common/Button';
@@ -10,28 +10,41 @@ import Button from '../../components/common/Button';
  * Full CRUD operations: Create, Read, Update, Delete
  */
 export default function EventManager() {
-    const { events, addEvent, updateEvent, deleteEvent } = useData();
+    const { events = [], venues = [], addEvent, updateEvent, deleteEvent, refreshEvents, refreshVenues, loading = {} } = useData();
+
+    // Force refresh on mount to ensure fresh data after backend restart
+    useEffect(() => {
+        refreshEvents();
+        refreshVenues(); // Also refresh venues to ensure dropdown is accurate
+    }, [refreshEvents, refreshVenues]);
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [editingEvent, setEditingEvent] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
+    const [statusMessage, setStatusMessage] = useState(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
     const [formData, setFormData] = useState({
         title: '',
         sport: '',
         date: '',
         time: '',
-        location: '',
-        participants: 0,
-        maxParticipants: 0,
-        image: '',
-        price: 0,
-        status: 'Open',
+        venueId: '',
+        maxParticipants: 64,
         description: '',
+        entryFee: 0,
+        status: 'UPCOMING',
     });
 
+    // Helper: Find venue name by ID
+    const getVenueName = (venueId) => {
+        const venue = venues.find(v => v.id === venueId);
+        return venue ? venue.name : 'Unknown Venue';
+    };
+
     // Filter events based on search
-    const filteredEvents = events.filter(event =>
-        event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        event.location.toLowerCase().includes(searchTerm.toLowerCase())
+    const filteredEvents = (events || []).filter(event =>
+        (event.title || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        getVenueName(event.venueId).toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     // Handle form input changes
@@ -48,70 +61,117 @@ export default function EventManager() {
             sport: '',
             date: '',
             time: '',
-            location: '',
-            participants: 0,
+            venueId: venues[0]?.id || '',
             maxParticipants: 64,
-            image: 'https://images.unsplash.com/photo-1461896836934-ffe607ba8211?w=800',
-            price: 0,
-            status: 'Open',
             description: '',
+            entryFee: 0,
+            status: 'UPCOMING',
         });
         setIsFormOpen(true);
+        setStatusMessage(null);
     };
 
     // Open form for editing existing event
     const handleEdit = (event) => {
         setEditingEvent(event);
+        const startDate = new Date(event.startDate);
         setFormData({
             title: event.title,
             sport: event.sport,
-            date: event.date,
-            time: event.time,
-            location: event.location,
-            participants: event.participants,
+            date: startDate.toISOString().split('T')[0],
+            time: startDate.toTimeString().split(' ')[0].substring(0, 5),
+            venueId: event.venueId,
             maxParticipants: event.maxParticipants,
-            image: event.image,
-            price: event.price,
+            description: event.description || '',
+            entryFee: parseFloat(event.entryFee) || 0,
             status: event.status,
-            description: event.description,
         });
         setIsFormOpen(true);
+        setStatusMessage(null);
     };
 
     // Handle form submission
-    const handleSubmit = (e) => {
-        e.preventDefault();
+    const handleSubmit = async (e) => {
+        if (e) e.preventDefault();
 
-        if (editingEvent) {
-            // Update existing event
-            updateEvent({
-                ...editingEvent,
-                ...formData,
-                participants: parseInt(formData.participants),
-                maxParticipants: parseInt(formData.maxParticipants),
-                price: parseFloat(formData.price),
-            });
-        } else {
-            // Create new event
-            addEvent({
-                id: Date.now(),
-                ...formData,
-                participants: parseInt(formData.participants),
-                maxParticipants: parseInt(formData.maxParticipants),
-                price: parseFloat(formData.price),
-            });
+        console.log('🚀 [EventManager] Form submission attempt');
+        setIsSubmitting(true);
+        setStatusMessage(null);
+
+        try {
+            // Validate all required fields
+            if (!formData.title || !formData.sport || !formData.date || !formData.time || !formData.venueId) {
+                console.warn('⚠️ [EventManager] Validation failed: missing fields', formData);
+                throw new Error('Please fill in all required fields (Title, Sport, Date, Time, Venue)');
+            }
+
+            // Construct ISO dates
+            const startDateTime = new Date(`${formData.date}T${formData.time}`);
+            if (isNaN(startDateTime.getTime())) {
+                throw new Error('Invalid date or time format selected');
+            }
+
+            // Default duration 2 hours
+            const endDateTime = new Date(startDateTime.getTime() + 2 * 60 * 60 * 1000);
+
+            const payload = {
+                title: formData.title.trim(),
+                description: (formData.description || '').trim(),
+                sport: formData.sport.trim(),
+                startDate: startDateTime.toISOString(),
+                endDate: endDateTime.toISOString(),
+                venueId: formData.venueId,
+                maxParticipants: parseInt(formData.maxParticipants) || 1,
+                entryFee: parseFloat(formData.entryFee) || 0,
+                status: formData.status || 'UPCOMING',
+            };
+
+            console.log('🌏 [EventManager] Dispatching API request...', payload);
+
+            if (editingEvent) {
+                await updateEvent(editingEvent.id, payload);
+                setStatusMessage({ type: 'success', text: 'Success! Event updated.' });
+            } else {
+                await addEvent(payload);
+                setStatusMessage({ type: 'success', text: 'Success! Event created.' });
+            }
+
+            console.log('✅ [EventManager] Persistence successful');
+
+            // Close after short delay
+            setTimeout(() => {
+                setIsFormOpen(false);
+                setEditingEvent(null);
+            }, 1500);
+
+        } catch (error) {
+            console.error('❌ [EventManager] Submission failed:', error);
+            const msg = error.response?.data?.message || error.message || 'Failed to save event. Check your connection.';
+            setStatusMessage({ type: 'error', text: msg });
+        } finally {
+            setIsSubmitting(false);
         }
-
-        setIsFormOpen(false);
-        setEditingEvent(null);
     };
 
     // Handle delete
-    const handleDelete = (id) => {
-        if (window.confirm('Are you sure you want to delete this event?')) {
-            deleteEvent(id);
+    const handleDelete = async (id) => {
+        if (window.confirm('Are you sure you want to delete this event? This action cannot be undone.')) {
+            try {
+                await deleteEvent(id);
+            } catch (error) {
+                alert('Failed to delete event: ' + error.message);
+            }
         }
     };
+
+    if (loading.events) {
+        return (
+            <div className="container-custom py-16 flex flex-col items-center justify-center space-y-4">
+                <Loader2 className="w-12 h-12 text-primary-600 animate-spin" />
+                <p className="text-gray-600 font-medium">Loading events...</p>
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-6">
@@ -121,11 +181,11 @@ export default function EventManager() {
                     <h1 className="text-3xl font-display font-bold text-gray-900 mb-2">
                         Event Manager
                     </h1>
-                    <p className="text-gray-600">Manage all events</p>
+                    <p className="text-gray-600">Schedule and manage sports events</p>
                 </div>
                 <Button onClick={handleCreate} className="flex items-center gap-2">
                     <Plus className="w-4 h-4" />
-                    Add Event
+                    Create New Event
                 </Button>
             </div>
 
@@ -145,70 +205,111 @@ export default function EventManager() {
 
             {/* Events List */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredEvents.map((event) => (
-                    <Card key={event.id} className="p-6">
-                        <div className="flex items-start justify-between mb-4">
-                            <div>
-                                <h3 className="font-bold text-gray-900">{event.title}</h3>
-                                <p className="text-sm text-gray-600">{event.sport}</p>
-                            </div>
-                            <div className="flex gap-2">
-                                <button
-                                    onClick={() => handleEdit(event)}
-                                    className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                                >
-                                    <Edit2 className="w-4 h-4" />
-                                </button>
-                                <button
-                                    onClick={() => handleDelete(event.id)}
-                                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                >
-                                    <Trash2 className="w-4 h-4" />
-                                </button>
-                            </div>
-                        </div>
+                {filteredEvents.length > 0 ? (
+                    filteredEvents.map((event) => (
+                        <Card key={event.id} className="group overflow-hidden">
+                            <div className="p-6">
+                                <div className="flex items-start justify-between mb-4">
+                                    <div className="flex-1">
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <span className="px-2 py-0.5 bg-primary-50 text-primary-700 text-[10px] font-bold uppercase tracking-wider rounded">
+                                                {event.sport}
+                                            </span>
+                                            <span className={`px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded ${event.status === 'UPCOMING' ? 'bg-green-50 text-green-700' :
+                                                event.status === 'CANCELLED' ? 'bg-red-50 text-red-700' :
+                                                    'bg-blue-50 text-blue-700'
+                                                }`}>
+                                                {event.status}
+                                            </span>
+                                        </div>
+                                        <h3 className="font-bold text-gray-900 text-lg leading-tight mb-1">{event.title}</h3>
+                                    </div>
+                                    <div className="flex gap-1 ml-2">
+                                        <button
+                                            onClick={() => handleEdit(event)}
+                                            className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+                                            title="Edit Event"
+                                        >
+                                            <Edit2 className="w-4 h-4" />
+                                        </button>
+                                        <button
+                                            onClick={() => handleDelete(event.id)}
+                                            className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                                            title="Delete Event"
+                                        >
+                                            <Trash2 className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                </div>
 
-                        <div className="space-y-2 text-sm">
-                            <div className="text-gray-600">
-                                <strong>Date:</strong> {event.date}
+                                <div className="space-y-3 py-3 border-t border-gray-100">
+                                    <div className="flex items-center text-sm text-gray-600 gap-2">
+                                        <Calendar className="w-4 h-4 text-gray-400" />
+                                        <span>{new Date(event.startDate).toLocaleDateString(undefined, { dateStyle: 'medium' })}</span>
+                                    </div>
+                                    <div className="flex items-center text-sm text-gray-600 gap-2">
+                                        <Clock className="w-4 h-4 text-gray-400" />
+                                        <span>{new Date(event.startDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                    </div>
+                                    <div className="flex items-center text-sm text-gray-600 gap-2">
+                                        <MapPin className="w-4 h-4 text-gray-400" />
+                                        <span className="truncate">{getVenueName(event.venueId)}</span>
+                                    </div>
+                                </div>
+
+                                <div className="mt-4 flex items-center justify-between pt-4 border-t border-gray-100">
+                                    <div className="text-xs text-gray-400">
+                                        Max: {event.maxParticipants} slots
+                                    </div>
+                                    <div className="text-sm font-bold text-primary-600">
+                                        {parseFloat(event.entryFee) > 0 ? `Rs ${parseFloat(event.entryFee).toLocaleString()}` : 'FREE'}
+                                    </div>
+                                </div>
                             </div>
-                            <div className="text-gray-600">
-                                <strong>Venue:</strong> {event.location}
-                            </div>
-                            <div className="flex justify-between text-gray-600">
-                                <span>Participants: {event.participants}/{event.maxParticipants}</span>
-                                <span className={event.price > 0 ? 'text-primary-600 font-semibold' : 'text-green-600 font-semibold'}>
-                                    {event.price > 0 ? `Rs${event.price}` : 'FREE'}
-                                </span>
-                            </div>
-                            {event.description && (
-                                <p className="text-gray-600 text-xs line-clamp-2">{event.description}</p>
-                            )}
-                        </div>
-                    </Card>
-                ))}
+                        </Card>
+                    ))
+                ) : (
+                    <div className="col-span-full">
+                        <Card className="p-16 text-center">
+                            <Calendar className="w-20 h-20 mx-auto text-gray-200 mb-6" />
+                            <h3 className="text-2xl font-bold text-gray-900 mb-2">No events found</h3>
+                            <p className="text-gray-500 max-w-sm mx-auto">Try adjusting your search criteria or create a new event for the community.</p>
+                            <Button onClick={handleCreate} variant="outline" className="mt-8">
+                                Add First Event
+                            </Button>
+                        </Card>
+                    </div>
+                )}
             </div>
-
-            {filteredEvents.length === 0 && (
-                <Card className="p-12 text-center">
-                    <Calendar className="w-16 h-16 mx-auto text-gray-300 mb-4" />
-                    <h3 className="text-xl font-semibold text-gray-900 mb-2">No events found</h3>
-                    <p className="text-gray-600">Try adjusting your search or add a new event</p>
-                </Card>
-            )}
 
             {/* Form Modal */}
             {isFormOpen && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                    <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6">
-                        <h2 className="text-2xl font-bold text-gray-900 mb-6">
-                            {editingEvent ? 'Edit Event' : 'Add New Event'}
-                        </h2>
+                <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+                    <Card className="w-full max-w-2xl max-h-[95vh] overflow-y-auto p-8 shadow-2xl relative animate-in zoom-in-95 duration-200">
+                        <div className="flex items-center justify-between mb-8 pb-4 border-b border-gray-100">
+                            <h2 className="text-2xl font-display font-bold text-gray-900">
+                                {editingEvent ? 'Update Event Details' : 'Create New Sports Event'}
+                            </h2>
+                            <button
+                                onClick={() => setIsFormOpen(false)}
+                                className="text-gray-400 hover:text-gray-600 transition-colors"
+                            >
+                                <Plus className="w-6 h-6 rotate-45" />
+                            </button>
+                        </div>
 
-                        <form onSubmit={handleSubmit} className="space-y-4">
+                        {statusMessage && (
+                            <div className={`mb-6 p-4 rounded-lg flex items-center gap-3 animate-in slide-in-from-top duration-300 ${statusMessage.type === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'
+                                }`}>
+                                {statusMessage.type === 'success' ? <CheckCircle className="w-5 h-5 flex-shrink-0" /> : <AlertCircle className="w-5 h-5 flex-shrink-0" />}
+                                <p className="text-sm font-medium">{statusMessage.text}</p>
+                            </div>
+                        )}
+
+                        <form onSubmit={handleSubmit} className="space-y-6">
                             <div>
-                                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                                    Event Title *
+                                <label className="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-tight">
+                                    Event Title
                                 </label>
                                 <input
                                     type="text"
@@ -216,15 +317,15 @@ export default function EventManager() {
                                     value={formData.title}
                                     onChange={handleChange}
                                     required
-                                    className="input-field"
-                                    placeholder="Summer Tennis Championship"
+                                    className="input-field-new"
+                                    placeholder="e.g. Summer Tennis Championship"
                                 />
                             </div>
 
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div>
-                                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                                        Sport *
+                                    <label className="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-tight">
+                                        Sport Category
                                     </label>
                                     <input
                                         type="text"
@@ -232,33 +333,33 @@ export default function EventManager() {
                                         value={formData.sport}
                                         onChange={handleChange}
                                         required
-                                        className="input-field"
-                                        placeholder="Tennis"
+                                        className="input-field-new"
+                                        placeholder="e.g. Tennis, Cricket"
                                     />
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                                        Status *
+                                    <label className="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-tight">
+                                        Initial Status
                                     </label>
                                     <select
                                         name="status"
                                         value={formData.status}
                                         onChange={handleChange}
                                         required
-                                        className="input-field"
+                                        className="input-field-new"
                                     >
-                                        <option value="Open">Open</option>
-                                        <option value="Full">Full</option>
-                                        <option value="Cancelled">Cancelled</option>
+                                        <option value="UPCOMING">Upcoming</option>
+                                        <option value="ONGOING">Ongoing</option>
+                                        <option value="CANCELLED">Cancelled</option>
                                     </select>
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div>
-                                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                                        Date *
+                                    <label className="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-tight">
+                                        Date
                                     </label>
                                     <input
                                         type="date"
@@ -266,13 +367,13 @@ export default function EventManager() {
                                         value={formData.date}
                                         onChange={handleChange}
                                         required
-                                        className="input-field"
+                                        className="input-field-new"
                                     />
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                                        Time *
+                                    <label className="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-tight">
+                                        Start Time
                                     </label>
                                     <input
                                         type="time"
@@ -280,43 +381,34 @@ export default function EventManager() {
                                         value={formData.time}
                                         onChange={handleChange}
                                         required
-                                        className="input-field"
+                                        className="input-field-new"
                                     />
                                 </div>
                             </div>
 
                             <div>
-                                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                                    Venue/Location *
+                                <label className="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-tight">
+                                    Venue Selection
                                 </label>
-                                <input
-                                    type="text"
-                                    name="location"
-                                    value={formData.location}
+                                <select
+                                    name="venueId"
+                                    value={formData.venueId}
                                     onChange={handleChange}
                                     required
-                                    className="input-field"
-                                    placeholder="Central Sports Complex"
-                                />
+                                    className="input-field-new"
+                                >
+                                    <option value="" disabled>Select a venue...</option>
+                                    {venues.map(venue => (
+                                        <option key={venue.id} value={venue.id}>
+                                            {venue.name} — {venue.location}
+                                        </option>
+                                    ))}
+                                </select>
                             </div>
 
-                            <div className="grid grid-cols-3 gap-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div>
-                                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                                        Current Participants
-                                    </label>
-                                    <input
-                                        type="number"
-                                        name="participants"
-                                        value={formData.participants}
-                                        onChange={handleChange}
-                                        min="0"
-                                        className="input-field"
-                                    />
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                    <label className="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-tight">
                                         Max Participants
                                     </label>
                                     <input
@@ -325,48 +417,66 @@ export default function EventManager() {
                                         value={formData.maxParticipants}
                                         onChange={handleChange}
                                         min="1"
-                                        className="input-field"
+                                        required
+                                        className="input-field-new"
                                     />
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                    <label className="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-tight">
                                         Entry Fee (Rs)
                                     </label>
-                                    <input
-                                        type="number"
-                                        name="price"
-                                        value={formData.price}
-                                        onChange={handleChange}
-                                        min="0"
-                                        className="input-field"
-                                    />
+                                    <div className="relative">
+                                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold">Rs</span>
+                                        <input
+                                            type="number"
+                                            name="entryFee"
+                                            value={formData.entryFee}
+                                            onChange={handleChange}
+                                            min="0"
+                                            className="input-field-new pl-12"
+                                            placeholder="0 for FREE"
+                                        />
+                                    </div>
                                 </div>
                             </div>
 
                             <div>
-                                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                                    Description
+                                <label className="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-tight">
+                                    Description & Rules
                                 </label>
                                 <textarea
                                     name="description"
                                     value={formData.description}
                                     onChange={handleChange}
-                                    rows="3"
-                                    className="input-field"
-                                    placeholder="Event details and description..."
+                                    rows="4"
+                                    className="input-field-new resize-none"
+                                    placeholder="Enter event details, registration requirements, or tournament rules..."
                                 />
                             </div>
 
-                            <div className="flex gap-3 pt-4">
-                                <Button type="submit" variant="primary" className="flex-1">
-                                    {editingEvent ? 'Update Event' : 'Create Event'}
+                            <div className="flex flex-col sm:flex-row gap-4 pt-6 border-t border-gray-100">
+                                <Button
+                                    type="submit"
+                                    variant="primary"
+                                    className="flex-1 py-4 text-lg font-bold"
+                                    disabled={isSubmitting}
+                                >
+                                    {isSubmitting ? (
+                                        <span className="flex items-center justify-center">
+                                            <Loader2 className="w-5 h-5 mr-3 animate-spin" />
+                                            Processing...
+                                        </span>
+                                    ) : (
+                                        editingEvent ? 'Update Event Profile' : 'Create Event Now'
+                                    )}
                                 </Button>
                                 <Button
                                     type="button"
                                     variant="ghost"
                                     onClick={() => setIsFormOpen(false)}
-                                    className="flex-1"
+                                    className="flex-1 py-4 text-lg border border-gray-200"
+                                    disabled={isSubmitting}
                                 >
                                     Cancel
                                 </Button>
@@ -375,6 +485,25 @@ export default function EventManager() {
                     </Card>
                 </div>
             )}
+
+            <style>{`
+                .input-field-new {
+                    width: 100%;
+                    padding: 0.875rem 1rem;
+                    background-color: #f9fafb;
+                    border: 2px solid #e5e7eb;
+                    border-radius: 0.75rem;
+                    color: #111827;
+                    transition: all 0.2s;
+                    font-size: 1rem;
+                }
+                .input-field-new:focus {
+                    outline: none;
+                    border-color: #0d9488;
+                    background-color: #fff;
+                    box-shadow: 0 0 0 4px rgba(13, 148, 136, 0.1);
+                }
+            `}</style>
         </div>
     );
 }

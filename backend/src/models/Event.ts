@@ -1,9 +1,20 @@
-import { eq, ilike, and, sql } from 'drizzle-orm';
-import { db, events, eventRegistrations } from '../db';
+import { eq, ilike, and, sql, desc } from 'drizzle-orm';
+import { db, events, eventRegistrations, users } from '../db';
 
 // Types derived from Drizzle schema
 type Event = typeof events.$inferSelect;
 type EventInsert = typeof events.$inferInsert;
+
+// Custom error class for registration errors
+export class RegistrationError extends Error {
+    constructor(
+        message: string,
+        public readonly code: 'DUPLICATE' | 'FULL' | 'NOT_FOUND'
+    ) {
+        super(message);
+        this.name = 'RegistrationError';
+    }
+}
 
 // ─── CRUD Operations (PostgreSQL via Drizzle) ────────────────────────────────
 
@@ -95,9 +106,11 @@ export const deleteEvent = async (id: string): Promise<boolean> => {
 export const registerUserForEvent = async (
     eventId: string,
     userId: string
-): Promise<Event | null> => {
+): Promise<Event> => {
     const event = await findEventById(eventId);
-    if (!event) return null;
+    if (!event) {
+        throw new RegistrationError('Event not found', 'NOT_FOUND');
+    }
 
     // Check existing registration
     const [existing] = await db
@@ -112,7 +125,7 @@ export const registerUserForEvent = async (
         .limit(1);
 
     if (existing) {
-        throw new Error('User already registered for this event');
+        throw new RegistrationError('User already registered for this event', 'DUPLICATE');
     }
 
     // Check capacity
@@ -122,7 +135,7 @@ export const registerUserForEvent = async (
         .where(eq(eventRegistrations.eventId, eventId));
 
     if (count >= event.maxParticipants) {
-        throw new Error('Event is full');
+        throw new RegistrationError('Event is full', 'FULL');
     }
 
     await db.insert(eventRegistrations).values({
@@ -158,4 +171,67 @@ export const unregisterUserFromEvent = async (
 
     console.log(`✅ User ${userId} unregistered from event ${eventId}`);
     return event;
+};
+
+// ─── Admin: All registrations with user + event data ─────────────────────────
+
+export const getAllRegistrations = async (filters?: {
+    eventId?: string;
+    status?: string;
+    limit?: number;
+    offset?: number;
+}): Promise<{
+    registrations: any[];
+    total: number;
+}> => {
+    const conditions = [];
+
+    if (filters?.eventId) {
+        conditions.push(eq(eventRegistrations.eventId, filters.eventId));
+    }
+    if (filters?.status) {
+        conditions.push(eq(eventRegistrations.status, filters.status as any));
+    }
+
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+    // Get total count
+    const [{ count }] = await db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(eventRegistrations)
+        .where(whereClause);
+
+    // Get paginated results with joins
+    const rows = await db
+        .select({
+            id: eventRegistrations.id,
+            status: eventRegistrations.status,
+            registeredAt: eventRegistrations.registeredAt,
+            userId: eventRegistrations.userId,
+            userName: users.name,
+            userEmail: users.email,
+            eventId: eventRegistrations.eventId,
+            eventTitle: events.title,
+            eventSport: events.sport,
+            eventStartDate: events.startDate,
+        })
+        .from(eventRegistrations)
+        .innerJoin(users, eq(eventRegistrations.userId, users.id))
+        .innerJoin(events, eq(eventRegistrations.eventId, events.id))
+        .where(whereClause)
+        .orderBy(desc(eventRegistrations.registeredAt))
+        .limit(filters?.limit ?? 50)
+        .offset(filters?.offset ?? 0);
+
+    return { registrations: rows, total: count };
+};
+
+// Get participant count for an event
+export const getEventParticipantCount = async (eventId: string): Promise<number> => {
+    const [{ count }] = await db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(eventRegistrations)
+        .where(eq(eventRegistrations.eventId, eventId));
+
+    return count;
 };

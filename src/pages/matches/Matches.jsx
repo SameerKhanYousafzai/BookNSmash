@@ -5,12 +5,11 @@ import { Filter, MapPin, Calendar, Users, DollarSign, Clock } from 'lucide-react
 import Button from '../../components/common/Button';
 import Card from '../../components/common/Card';
 import Modal from '../../components/common/Modal';
-import { sportsCategories } from '../../data/mockData';
 import { useData } from '../../context/DataContext';
 
 
 export default function Matches() {
-    const { matches } = useData();
+    const { events, venues, loading, sportsCategories } = useData();
     const [filters, setFilters] = useState({
         sport: '',
         date: '',
@@ -19,10 +18,12 @@ export default function Matches() {
     const [selectedMatch, setSelectedMatch] = useState(null);
     const [showJoinModal, setShowJoinModal] = useState(false);
 
-    const filteredMatches = matches.filter(match => {
-        if (filters.sport && match.sport !== filters.sport) return false;
-        if (filters.date && match.date !== filters.date) return false;
-        if (filters.location && !match.venue.toLowerCase().includes(filters.location.toLowerCase())) return false;
+    // In this context, "matches" (pickup games) are represented by "events" in the DB
+    const filteredMatches = events.filter(event => {
+        if (filters.sport && event.sport !== filters.sport) return false;
+        if (filters.date && event.startDate.split('T')[0] !== filters.date) return false;
+        // Search by venue name (placeholder for more complex join logic if needed)
+        // Note: event.venueId will need to be resolved to a name
         return true;
     });
 
@@ -114,67 +115,69 @@ export default function Matches() {
 
             {/* Matches Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {filteredMatches.map((match) => (
-                    <Card key={match.id} className="p-6 hover:shadow-xl transition-all duration-300">
-                        <div className="flex items-start justify-between mb-4">
-                            <div className="flex items-center gap-3">
-                                <div className="w-12 h-12 bg-gradient-primary rounded-xl flex items-center justify-center text-2xl">
-                                    {sportsCategories.find(s => s.name === match.sport)?.icon}
+                {filteredMatches.map((event) => {
+                    const venue = venues.find(v => v.id === event.venueId);
+                    return (
+                        <Card key={event.id} className="p-6 hover:shadow-xl transition-all duration-300">
+                            <div className="flex items-start justify-between mb-4">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-12 h-12 bg-gradient-primary rounded-xl flex items-center justify-center text-2xl">
+                                        {sportsCategories.find(s => s.name === event.sport)?.icon}
+                                    </div>
+                                    <div>
+                                        <h3 className="font-bold text-lg text-gray-900">{event.title || event.sport}</h3>
+                                        <p className="text-sm text-gray-600">Level: Intermediate</p>
+                                    </div>
                                 </div>
-                                <div>
-                                    <h3 className="font-bold text-lg text-gray-900">{match.sport}</h3>
-                                    <p className="text-sm text-gray-600">{match.skillLevel}</p>
+                                <span className={`px-3 py-1 rounded-full text-xs font-semibold ${event.status === 'UPCOMING'
+                                    ? 'bg-green-100 text-green-700'
+                                    : 'bg-red-100 text-red-700'
+                                    }`}>
+                                    {event.status === 'UPCOMING' ? 'Open' : event.status}
+                                </span>
+                            </div>
+
+                            <p className="text-gray-700 mb-4">{event.description}</p>
+
+                            <div className="space-y-2 mb-4">
+                                <div className="flex items-center text-sm text-gray-600">
+                                    <Calendar className="w-4 h-4 mr-2 text-primary-600" />
+                                    {new Date(event.startDate).toLocaleDateString()}
+                                </div>
+                                <div className="flex items-center text-sm text-gray-600">
+                                    <Clock className="w-4 h-4 mr-2 text-primary-600" />
+                                    {new Date(event.startDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                </div>
+                                <div className="flex items-center text-sm text-gray-600">
+                                    <MapPin className="w-4 h-4 mr-2 text-primary-600" />
+                                    {venue?.name || 'Location TBD'}
+                                </div>
+                                <div className="flex items-center text-sm text-gray-600">
+                                    <Users className="w-4 h-4 mr-2 text-primary-600" />
+                                    {event.currentParticipants || 0}/{event.maxParticipants} players
+                                </div>
+                                <div className="flex items-center text-sm text-gray-600">
+                                    <DollarSign className="w-4 h-4 mr-2 text-primary-600" />
+                                    PKR {event.entryFee} per person
                                 </div>
                             </div>
-                            <span className={`px-3 py-1 rounded-full text-xs font-semibold ${match.status === 'Open'
-                                ? 'bg-green-100 text-green-700'
-                                : 'bg-red-100 text-red-700'
-                                }`}>
-                                {match.status}
-                            </span>
-                        </div>
 
-                        <p className="text-gray-700 mb-4">{match.description}</p>
-
-                        <div className="space-y-2 mb-4">
-                            <div className="flex items-center text-sm text-gray-600">
-                                <Calendar className="w-4 h-4 mr-2 text-primary-600" />
-                                {new Date(match.date).toLocaleDateString()}
+                            <div className="flex items-center justify-between pt-4 border-t border-gray-200">
+                                <div className="text-sm text-gray-600">
+                                    Organized by <span className="font-semibold text-gray-900">Admin</span>
+                                </div>
+                                <Button
+                                    variant={event.status === 'UPCOMING' ? 'primary' : 'ghost'}
+                                    size="sm"
+                                    onClick={() => handleJoinMatch(event)}
+                                    disabled={event.status !== 'UPCOMING'}
+                                >
+                                    {event.status === 'UPCOMING' ? 'Join Match' : 'Full'}
+                                </Button>
                             </div>
-                            <div className="flex items-center text-sm text-gray-600">
-                                <Clock className="w-4 h-4 mr-2 text-primary-600" />
-                                {match.time}
-                            </div>
-                            <div className="flex items-center text-sm text-gray-600">
-                                <MapPin className="w-4 h-4 mr-2 text-primary-600" />
-                                {match.venue}
-                            </div>
-                            <div className="flex items-center text-sm text-gray-600">
-                                <Users className="w-4 h-4 mr-2 text-primary-600" />
-                                {match.currentPlayers}/{match.maxPlayers} players
-                            </div>
-                            <div className="flex items-center text-sm text-gray-600">
-                                <DollarSign className="w-4 h-4 mr-2 text-primary-600" />
-
-                                PKR {match.price} per person
-                            </div>
-                        </div>
-
-                        <div className="flex items-center justify-between pt-4 border-t border-gray-200">
-                            <div className="text-sm text-gray-600">
-                                Organized by <span className="font-semibold text-gray-900">{match.organizer}</span>
-                            </div>
-                            <Button
-                                variant={match.status === 'Open' ? 'primary' : 'ghost'}
-                                size="sm"
-                                onClick={() => handleJoinMatch(match)}
-                                disabled={match.status !== 'Open'}
-                            >
-                                {match.status === 'Open' ? 'Join Match' : 'Full'}
-                            </Button>
-                        </div>
-                    </Card>
-                ))}
+                        </Card>
+                    );
+                })}
             </div>
 
             {/* Join Match Modal */}

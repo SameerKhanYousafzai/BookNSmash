@@ -1,22 +1,36 @@
-import { useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, MapPin, Star, Clock, DollarSign, Check, Phone, Mail, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowLeft, MapPin, Star, Clock, DollarSign, Check, Phone, Mail, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import Button from '../../components/common/Button';
 import Card from '../../components/common/Card';
-import { venues } from '../../data/mockData';
+import { useData } from '../../context/DataContext';
 
 export default function VenueDetail() {
     const { id } = useParams();
     const navigate = useNavigate();
-    const venue = venues.find(v => v.id === parseInt(id));
+    const { venues, loading } = useData();
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
+
+    // Find venue from context
+    const venue = useMemo(() => {
+        return (venues || []).find(v => String(v.id) === String(id));
+    }, [venues, id]);
+
+    if (loading.venues && !venue) {
+        return (
+            <div className="container-custom py-32 flex flex-col items-center justify-center space-y-4">
+                <Loader2 className="w-12 h-12 text-primary-600 animate-spin" />
+                <p className="text-gray-600 font-medium">Loading venue details...</p>
+            </div>
+        );
+    }
 
     if (!venue) {
         return (
             <div className="container-custom py-16 text-center">
                 <MapPin className="w-16 h-16 mx-auto text-gray-300 mb-4" />
                 <h2 className="text-2xl font-bold text-gray-900 mb-2">Venue Not Found</h2>
-                <p className="text-gray-600 mb-6">The venue you're looking for doesn't exist.</p>
+                <p className="text-gray-600 mb-6">The venue you're looking for doesn't exist in our database.</p>
                 <Button onClick={() => navigate('/venues')}>
                     <ArrowLeft className="w-4 h-4 mr-2" />
                     Back to Venues
@@ -54,8 +68,8 @@ export default function VenueDetail() {
                             <div className="flex items-center gap-4 text-gray-600">
                                 <div className="flex items-center gap-1">
                                     <Star className="w-5 h-5 fill-yellow-400 text-yellow-400" />
-                                    <span className="font-semibold text-gray-900">{venue.rating}</span>
-                                    <span>({venue.reviews} reviews)</span>
+                                    <span className="font-semibold text-gray-900">{venue.rating || 4.8}</span>
+                                    <span>({venue.reviews || 0} reviews)</span>
                                 </div>
                                 <div className="flex items-center gap-1">
                                     <MapPin className="w-5 h-5 text-primary-600" />
@@ -104,8 +118,8 @@ export default function VenueDetail() {
                                 key={idx}
                                 onClick={() => setCurrentImageIndex(idx)}
                                 className={`w-2 h-2 rounded-full transition-all ${idx === currentImageIndex
-                                        ? 'bg-white w-8'
-                                        : 'bg-white/50 hover:bg-white/75'
+                                    ? 'bg-white w-8'
+                                    : 'bg-white/50 hover:bg-white/75'
                                     }`}
                             />
                         ))}
@@ -119,8 +133,8 @@ export default function VenueDetail() {
                             key={idx}
                             onClick={() => setCurrentImageIndex(idx)}
                             className={`relative h-24 rounded-lg overflow-hidden ${idx === currentImageIndex
-                                    ? 'ring-4 ring-primary-500'
-                                    : 'opacity-60 hover:opacity-100'
+                                ? 'ring-4 ring-primary-500'
+                                : 'opacity-60 hover:opacity-100'
                                 } transition-all`}
                         >
                             <img
@@ -197,7 +211,9 @@ export default function VenueDetail() {
                         <Card className="p-6 sticky top-24">
                             <div className="mb-6">
                                 <div className="text-sm text-gray-600 mb-1">Price Range</div>
-                                <div className="text-3xl font-bold text-primary-600">{venue.priceRange}</div>
+                                <div className="text-3xl font-bold text-primary-600">
+                                    Rs {parseFloat(venue.pricePerHour).toLocaleString() || '0'}
+                                </div>
                                 <div className="text-sm text-gray-600 mt-1">per hour</div>
                             </div>
 
@@ -206,7 +222,9 @@ export default function VenueDetail() {
                                     <Clock className="w-5 h-5 text-primary-600" />
                                     <div>
                                         <div className="text-sm text-gray-600">Hours</div>
-                                        <div className="font-semibold">{venue.hours}</div>
+                                        <div className="font-semibold">
+                                            {venue.operatingHours?.open || '06:00'} - {venue.operatingHours?.close || '22:00'}
+                                        </div>
                                     </div>
                                 </div>
                             </div>

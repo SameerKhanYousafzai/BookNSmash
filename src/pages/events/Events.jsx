@@ -3,11 +3,11 @@ import { Link } from 'react-router-dom';
 import { Filter, Calendar, MapPin, Users, DollarSign, Trophy } from 'lucide-react';
 import Button from '../../components/common/Button';
 import Card from '../../components/common/Card';
-import { sportsCategories } from '../../data/mockData';
 import { useData } from '../../context/DataContext';
+import { formatCurrency } from '../../utils/currency';
 
 export default function Events() {
-    const { events } = useData();
+    const { events, sportsCategories } = useData();
     const [filters, setFilters] = useState({
         sport: '',
         status: '',
@@ -170,7 +170,7 @@ export default function Events() {
                                     <span className="text-xs text-gray-500 mr-2">Entry Fee</span>
                                     {event.price > 0 ? (
                                         <span className="text-lg font-bold text-primary-600">
-                                            Rs{event.price}
+                                            {formatCurrency(event.price)}
                                         </span>
                                     ) : (
                                         <span className="text-lg font-bold text-green-600">

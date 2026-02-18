@@ -30,7 +30,7 @@ export const updateUserSchema = z.object({
 // Event validators
 export const createEventSchema = z.object({
     title: z.string().min(3, 'Title must be at least 3 characters').max(100),
-    description: z.string().min(10, 'Description must be at least 10 characters').max(500),
+    description: z.string().max(1000).optional(),
     sport: z.string().min(1, 'Sport is required'),
     startDate: z.string().refine((date) => !isNaN(Date.parse(date)), 'Invalid start date'),
     endDate: z.string().refine((date) => !isNaN(Date.parse(date)), 'Invalid end date'),
@@ -48,7 +48,7 @@ export const createVenueSchema = z.object({
     sports: z.array(z.string()).min(1, 'At least one sport is required'),
     amenities: z.array(z.string()),
     pricePerHour: z.number().min(0, 'Price must be non-negative'),
-    images: z.array(z.string().url('Invalid image URL')),
+    images: z.array(z.string()).optional(),
     operatingHours: z.object({
         open: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, 'Invalid time format (HH:MM)'),
         close: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, 'Invalid time format (HH:MM)'),

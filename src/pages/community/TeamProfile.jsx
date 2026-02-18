@@ -5,15 +5,17 @@ import Button from '../../components/common/Button';
 import Card from '../../components/common/Card';
 import Modal from '../../components/common/Modal';
 import FormInput from '../../components/common/FormInput';
-import { teams, sportsCategories, players } from '../../data/mockData';
+import { useData } from '../../context/DataContext';
 
 export default function TeamProfile() {
     const { id } = useParams();
     const navigate = useNavigate();
+    const { teams, players, sportsCategories, loading } = useData();
     const [isEditing, setIsEditing] = useState(false);
     const [showManageModal, setShowManageModal] = useState(false);
 
-    const team = id === 'new' ? null : teams.find(t => t.id === parseInt(id));
+    // Find team from context - handle UUID and new teams
+    const team = id === 'new' ? null : (teams || []).find(t => String(t.id) === String(id));
 
     const [formData, setFormData] = useState(team || {
         name: '',
@@ -44,6 +46,7 @@ export default function TeamProfile() {
 
     const handleSave = () => {
         if (validateForm()) {
+            // Mock save - in real app would call addTeam/updateTeam
             alert('Team saved successfully!');
             setIsEditing(false);
             if (id === 'new') {
@@ -67,6 +70,15 @@ export default function TeamProfile() {
         }
     };
 
+    if (loading.teams && !team && id !== 'new') {
+        return (
+            <div className="container-custom py-32 flex flex-col items-center justify-center space-y-4">
+                <Users className="w-12 h-12 text-primary-600 animate-pulse" />
+                <p className="text-gray-600 font-medium">Loading team profile...</p>
+            </div>
+        );
+    }
+
     if (!team && id !== 'new') {
         return (
             <div className="container-custom py-16 text-center">
@@ -84,8 +96,8 @@ export default function TeamProfile() {
     const isNewTeam = id === 'new';
     const isViewMode = !isNewTeam && !isEditing;
 
-    // Mock team members
-    const teamMembers = players.slice(0, 5);
+    // Team members - in local state for simplicity in profile view
+    const teamMembers = (players || []).slice(0, 5);
 
     return (
         <div className="container-custom py-8 max-w-5xl">
@@ -124,22 +136,22 @@ export default function TeamProfile() {
 
                                 <div className="grid grid-cols-3 gap-2 mb-6">
                                     <div className="bg-gray-50 rounded-lg p-3">
-                                        <div className="text-2xl font-bold text-gray-900">{formData.members}</div>
+                                        <div className="text-2xl font-bold text-gray-900">{formData.members || 0}</div>
                                         <div className="text-xs text-gray-600">Members</div>
                                     </div>
                                     <div className="bg-green-50 rounded-lg p-3">
-                                        <div className="text-2xl font-bold text-green-600">{formData.wins}</div>
+                                        <div className="text-2xl font-bold text-green-600">{formData.wins || 0}</div>
                                         <div className="text-xs text-gray-600">Wins</div>
                                     </div>
                                     <div className="bg-red-50 rounded-lg p-3">
-                                        <div className="text-2xl font-bold text-red-600">{formData.losses}</div>
+                                        <div className="text-2xl font-bold text-red-600">{formData.losses || 0}</div>
                                         <div className="text-xs text-gray-600">Losses</div>
                                     </div>
                                 </div>
 
                                 <div className="mb-6 pb-6 border-b border-gray-200">
                                     <div className="text-sm text-gray-600">Team Captain</div>
-                                    <div className="font-semibold text-gray-900">{formData.captain}</div>
+                                    <div className="font-semibold text-gray-900">{formData.captain || 'TBD'}</div>
                                 </div>
 
                                 <div className="space-y-2">
@@ -172,7 +184,7 @@ export default function TeamProfile() {
                             {/* About */}
                             <Card className="p-6">
                                 <h3 className="text-xl font-bold text-gray-900 mb-4">About the Team</h3>
-                                <p className="text-gray-700 leading-relaxed">{formData.description}</p>
+                                <p className="text-gray-700 leading-relaxed">{formData.description || 'No description provided.'}</p>
                             </Card>
 
                             {/* Team Members */}
@@ -189,11 +201,11 @@ export default function TeamProfile() {
                                     </Button>
                                 </div>
                                 <div className="space-y-3">
-                                    {teamMembers.map((member, idx) => (
+                                    {teamMembers.length > 0 ? teamMembers.map((member, idx) => (
                                         <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                                             <div className="flex items-center gap-3">
                                                 <img
-                                                    src={member.avatar}
+                                                    src={member.avatar || 'https://i.pravatar.cc/150'}
                                                     alt={member.name}
                                                     className="w-12 h-12 rounded-full object-cover"
                                                 />
@@ -208,35 +220,17 @@ export default function TeamProfile() {
                                                 </span>
                                             )}
                                         </div>
-                                    ))}
+                                    )) : (
+                                        <div className="text-center py-4 text-gray-500">No members yet</div>
+                                    )}
                                 </div>
                             </Card>
 
                             {/* Recent Matches */}
                             <Card className="p-6">
                                 <h3 className="text-xl font-bold text-gray-900 mb-4">Recent Matches</h3>
-                                <div className="space-y-3">
-                                    {[
-                                        { opponent: 'Team Alpha', result: 'Win', score: '3-1', date: '2 days ago' },
-                                        { opponent: 'Team Beta', result: 'Loss', score: '1-2', date: '5 days ago' },
-                                        { opponent: 'Team Gamma', result: 'Win', score: '2-0', date: '1 week ago' },
-                                    ].map((match, idx) => (
-                                        <div key={idx} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                                            <div className="flex items-center gap-3">
-                                                <Trophy className={`w-8 h-8 ${match.result === 'Win' ? 'text-green-600' : 'text-red-600'}`} />
-                                                <div>
-                                                    <div className="font-semibold text-gray-900">vs {match.opponent}</div>
-                                                    <div className="text-sm text-gray-600">{match.date}</div>
-                                                </div>
-                                            </div>
-                                            <div className="text-right">
-                                                <div className={`font-bold ${match.result === 'Win' ? 'text-green-600' : 'text-red-600'}`}>
-                                                    {match.result}
-                                                </div>
-                                                <div className="text-sm text-gray-600">{match.score}</div>
-                                            </div>
-                                        </div>
-                                    ))}
+                                <div className="text-center py-8 text-gray-500 italic">
+                                    No recent matches recorded.
                                 </div>
                             </Card>
                         </>
@@ -268,7 +262,7 @@ export default function TeamProfile() {
                                             }`}
                                     >
                                         <option value="">Select a sport</option>
-                                        {sportsCategories.map(sport => (
+                                        {(sportsCategories || []).map(sport => (
                                             <option key={sport.id} value={sport.name}>{sport.name}</option>
                                         ))}
                                     </select>
@@ -300,7 +294,7 @@ export default function TeamProfile() {
                                     />
                                     {errors.description && <p className="mt-1 text-sm text-red-500">{errors.description}</p>}
                                     <p className="mt-1 text-sm text-gray-500">
-                                        {formData.description.length}/500 characters (minimum 20)
+                                        {(formData.description || '').length}/500 characters (minimum 20)
                                     </p>
                                 </div>
 
@@ -351,7 +345,7 @@ export default function TeamProfile() {
                                     className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                                 >
                                     <option value="">Select a player</option>
-                                    {players.map(player => (
+                                    {(players || []).map(player => (
                                         <option key={player.id} value={player.name}>{player.name}</option>
                                     ))}
                                 </select>
@@ -373,7 +367,7 @@ export default function TeamProfile() {
                                     <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                                         <div className="flex items-center gap-3">
                                             <img
-                                                src={member.avatar}
+                                                src={member.avatar || 'https://i.pravatar.cc/150'}
                                                 alt={member.name}
                                                 className="w-10 h-10 rounded-full object-cover"
                                             />

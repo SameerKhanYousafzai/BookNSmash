@@ -20,7 +20,7 @@ export const authenticate = (req: Request, res: Response, next: NextFunction): v
         const payload = verifyAccessToken(token);
 
         // Attach user info to request
-        req.user = payload;
+        (req as any).user = payload;
 
         next();
     } catch (error) {
@@ -29,4 +29,19 @@ export const authenticate = (req: Request, res: Response, next: NextFunction): v
             message: 'Invalid or expired token',
         });
     }
+};
+
+export const authorize = (...roles: string[]) => {
+    return (req: Request, res: Response, next: NextFunction) => {
+        const user = (req as any).user;
+
+        if (!user || (roles.length > 0 && !roles.includes(user.role))) {
+            return res.status(403).json({
+                error: 'Unauthorized',
+                message: 'You do not have permission to perform this action',
+            });
+        }
+
+        next();
+    };
 };

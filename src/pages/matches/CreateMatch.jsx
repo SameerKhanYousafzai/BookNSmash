@@ -4,15 +4,16 @@ import { ArrowLeft, Calendar, Clock, MapPin, Users, DollarSign, AlertCircle } fr
 import Button from '../../components/common/Button';
 import Card from '../../components/common/Card';
 import FormInput from '../../components/common/FormInput';
-import { sportsCategories, venues } from '../../data/mockData';
+import { useData } from '../../context/DataContext';
 
 export default function CreateMatch() {
     const navigate = useNavigate();
+    const { sportsCategories, venues, addEvent } = useData();
     const [formData, setFormData] = useState({
         sport: '',
         date: '',
         time: '',
-        venue: '',
+        venueId: '',
         skillLevel: 'Intermediate',
         maxPlayers: 4,
         price: 0,
@@ -29,7 +30,7 @@ export default function CreateMatch() {
         if (!formData.sport) newErrors.sport = 'Sport is required';
         if (!formData.date) newErrors.date = 'Date is required';
         if (!formData.time) newErrors.time = 'Time is required';
-        if (!formData.venue) newErrors.venue = 'Venue is required';
+        if (!formData.venueId) newErrors.venue = 'Venue is required';
         if (formData.maxPlayers < 2) newErrors.maxPlayers = 'Minimum 2 players required';
         if (formData.maxPlayers > 50) newErrors.maxPlayers = 'Maximum 50 players allowed';
         if (formData.price < 0) newErrors.price = 'Price cannot be negative';
@@ -40,15 +41,34 @@ export default function CreateMatch() {
         return Object.keys(newErrors).length === 0;
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
 
         if (validateForm()) {
-            // Mock create match
-            setMessage({ type: 'success', text: 'Match created successfully! Redirecting...' });
-            setTimeout(() => {
-                navigate('/matches');
-            }, 1500);
+            try {
+                // Construct the event start/end dates
+                const startDateTime = new Date(`${formData.date}T${formData.time}`);
+                const endDateTime = new Date(startDateTime.getTime() + 2 * 60 * 60 * 1000); // Default 2 hours
+
+                await addEvent({
+                    title: `${formData.sport} Match`,
+                    description: formData.description,
+                    sport: formData.sport,
+                    startDate: startDateTime,
+                    endDate: endDateTime,
+                    venueId: formData.venueId,
+                    maxParticipants: parseInt(formData.maxPlayers),
+                    entryFee: parseFloat(formData.price),
+                    status: 'UPCOMING'
+                });
+
+                setMessage({ type: 'success', text: 'Match created successfully! Redirecting...' });
+                setTimeout(() => {
+                    navigate('/matches');
+                }, 1500);
+            } catch (error) {
+                setMessage({ type: 'error', text: 'Failed to create match. Please try again.' });
+            }
         }
     };
 
@@ -163,15 +183,15 @@ export default function CreateMatch() {
                             Venue <span className="text-red-500">*</span>
                         </label>
                         <select
-                            name="venue"
-                            value={formData.venue}
+                            name="venueId"
+                            value={formData.venueId}
                             onChange={handleChange}
                             className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent ${errors.venue ? 'border-red-500' : 'border-gray-300'
                                 }`}
                         >
                             <option value="">Select a venue</option>
                             {venues.map(venue => (
-                                <option key={venue.id} value={venue.name}>
+                                <option key={venue.id} value={venue.id}>
                                     {venue.name} - {venue.location}
                                 </option>
                             ))}

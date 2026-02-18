@@ -1,8 +1,9 @@
-import React from 'react';
-import { Users, Calendar, Trophy, DollarSign, TrendingUp, Activity } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Users, Calendar, Trophy, DollarSign, TrendingUp, Activity, Loader2 } from 'lucide-react';
 import StatsCard from '../../components/common/StatsCard';
 import Card from '../../components/common/Card';
-import { adminStats } from '../../data/authMockData';
+import { formatCurrency } from '../../utils/currency';
+import api from '../../services/api';
 
 /**
  * Weekly Dashboard
@@ -10,7 +11,37 @@ import { adminStats } from '../../data/authMockData';
  * Displays registrations, matches, events, and earnings
  */
 export default function WeeklyDashboard() {
-    const stats = adminStats.weekly;
+    const [stats, setStats] = useState(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchStats = async () => {
+            try {
+                const res = await api.get('/admin/dashboard/weekly');
+                if (res.ok) {
+                    const data = await res.json();
+                    setStats(data);
+                }
+            } catch (error) {
+                console.error('❌ Failed to fetch weekly stats:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchStats();
+    }, []);
+
+    if (loading) {
+        return (
+            <div className="container-custom py-16 flex flex-col items-center justify-center space-y-4">
+                <Loader2 className="w-12 h-12 text-primary-600 animate-spin" />
+                <p className="text-gray-600 font-medium">Loading weekly reports...</p>
+            </div>
+        );
+    }
+
+    if (!stats) return null;
 
     return (
         <div className="space-y-8">
@@ -47,7 +78,7 @@ export default function WeeklyDashboard() {
                 />
                 <StatsCard
                     title="Total Earnings"
-                    value={`$${stats.totalEarnings.toLocaleString()}`}
+                    value={formatCurrency(stats.totalEarnings)}
                     trend={stats.earningsTrend}
                     icon={DollarSign}
                     color="orange"
@@ -77,7 +108,7 @@ export default function WeeklyDashboard() {
                                     <td className="py-3 px-4 text-right text-gray-700">{day.registrations}</td>
                                     <td className="py-3 px-4 text-right text-gray-700">{day.matches}</td>
                                     <td className="py-3 px-4 text-right font-semibold text-green-600">
-                                        ${day.earnings.toLocaleString()}
+                                        {formatCurrency(day.earnings)}
                                     </td>
                                 </tr>
                             ))}
@@ -118,7 +149,7 @@ export default function WeeklyDashboard() {
                     marking a <strong>{stats.registrationsTrend}</strong> increase from last week.
                     The platform facilitated <strong>{stats.matchesCreated} matches</strong> and
                     hosted <strong>{stats.eventsHosted} events</strong>, generating total earnings of
-                    <strong> ${stats.totalEarnings.toLocaleString()}</strong>. Tennis continues to be the most
+                    <strong> {formatCurrency(stats.totalEarnings)}</strong>. Tennis continues to be the most
                     popular sport, followed by Basketball and Football.
                 </p>
             </Card>
