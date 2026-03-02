@@ -13,7 +13,7 @@ interface Config {
 }
 
 const config: Config = {
-    port: parseInt(process.env.PORT || '3000', 10),
+    port: parseInt(process.env.PORT || '5000', 10),
     nodeEnv: process.env.NODE_ENV || 'development',
     jwtSecret: process.env.JWT_SECRET || 'default-secret-key',
     jwtRefreshSecret: process.env.JWT_REFRESH_SECRET || 'default-refresh-secret-key',

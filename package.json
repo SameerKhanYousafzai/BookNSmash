@@ -4,6 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "predev": "node scripts/cleanup.cjs",
     "dev": "concurrently --kill-others-on-fail -n frontend,backend -c blue,yellow \"vite\" \"cd backend && npm run dev\"",
     "dev:frontend": "vite",
     "dev:backend": "cd backend && npm run dev",

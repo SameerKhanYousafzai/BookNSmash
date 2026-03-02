@@ -4,6 +4,7 @@
   "description": "Simple backend for BookNSmash sports platform",
   "main": "dist/server.js",
   "scripts": {
+    "predev": "node ../scripts/cleanup.cjs",
     "dev": "nodemon src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
