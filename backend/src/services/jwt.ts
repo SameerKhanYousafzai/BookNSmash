@@ -5,8 +5,8 @@ import { AuthTokenPayload, RefreshTokenPayload } from '../types';
 const ACCESS_TOKEN_EXPIRY = '15m';
 const REFRESH_TOKEN_EXPIRY = '7d';
 
-export const generateAccessToken = (userId: string, role: 'USER' | 'ADMIN'): string => {
-    const payload: AuthTokenPayload = { userId, role };
+export const generateAccessToken = (userId: string, role: 'USER' | 'ADMIN', name: string): string => {
+    const payload: AuthTokenPayload = { userId, role, name };
     return jwt.sign(payload, config.jwtSecret, { expiresIn: ACCESS_TOKEN_EXPIRY });
 };
 

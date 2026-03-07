@@ -55,6 +55,7 @@ export interface Team {
 export interface AuthTokenPayload {
     userId: string;
     role: 'USER' | 'ADMIN';
+    name: string;
 }
 
 export interface RefreshTokenPayload {

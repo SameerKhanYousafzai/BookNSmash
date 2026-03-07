@@ -25,7 +25,7 @@ router.post('/register', validate(registerSchema), async (req: Request, res: Res
         const user = await createUser({ name, email, password });
 
         // Generate tokens
-        const accessToken = generateAccessToken(user.id, user.role);
+        const accessToken = generateAccessToken(user.id, user.role, user.name);
         const refreshToken = generateRefreshToken(user.id);
 
         res.status(201).json({
@@ -66,7 +66,7 @@ router.post('/login', validate(loginSchema), async (req: Request, res: Response)
         }
 
         // Generate tokens
-        const accessToken = generateAccessToken(user.id, user.role);
+        const accessToken = generateAccessToken(user.id, user.role, user.name);
         const refreshToken = generateRefreshToken(user.id);
 
         res.json({
@@ -107,7 +107,7 @@ router.post('/admin/login', validate(loginSchema), async (req: Request, res: Res
         }
 
         // Generate tokens
-        const accessToken = generateAccessToken(user.id, user.role);
+        const accessToken = generateAccessToken(user.id, user.role, user.name);
         const refreshToken = generateRefreshToken(user.id);
 
         res.json({
@@ -142,7 +142,7 @@ router.post('/refresh', validate(refreshTokenSchema), async (req: Request, res: 
         }
 
         // Generate new access token
-        const accessToken = generateAccessToken(user.id, user.role);
+        const accessToken = generateAccessToken(user.id, user.role, user.name);
 
         res.json({
             message: 'Token refreshed successfully',
