@@ -24,8 +24,8 @@ export default function Register() {
 
         if (!formData.fullName) {
             newErrors.fullName = 'Full name is required';
-        } else if (formData.fullName.length < 2) {
-            newErrors.fullName = 'Name must be at least 2 characters';
+        } else if (formData.fullName.length < 1) {
+            newErrors.fullName = 'Name is required';
         }
 
         if (!formData.email) {
@@ -36,10 +36,8 @@ export default function Register() {
 
         if (!formData.password) {
             newErrors.password = 'Password is required';
-        } else if (formData.password.length < 8) {
-            newErrors.password = 'Password must be at least 8 characters';
-        } else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(formData.password)) {
-            newErrors.password = 'Password must contain uppercase, lowercase, and number';
+        } else if (formData.password.length < 6) {
+            newErrors.password = 'Password must be at least 6 characters';
         }
 
         if (!formData.confirmPassword) {
