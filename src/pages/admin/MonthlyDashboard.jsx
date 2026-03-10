@@ -43,28 +43,9 @@ export default function MonthlyDashboard() {
 
     if (!stats) return null;
 
-    // Use dummy data for breakdowns if backend doesn't provide them yet, 
-    // but ensure currency and main stats are real
-    const weeklyBreakdown = stats.weeklyBreakdown || [
-        { week: 'Week 1', registrations: 12, matches: 8, earnings: (stats.totalEarnings * 0.2) },
-        { week: 'Week 2', registrations: 18, matches: 12, earnings: (stats.totalEarnings * 0.3) },
-        { week: 'Week 3', registrations: 25, matches: 15, earnings: (stats.totalEarnings * 0.4) },
-        { week: 'Week 4', registrations: 15, matches: 10, earnings: (stats.totalEarnings * 0.1) },
-    ];
-
-    const topSports = stats.topSports || [
-        { name: 'Tennis', count: 45, percentage: 35 },
-        { name: 'Basketball', count: 35, percentage: 28 },
-        { name: 'Football', count: 30, percentage: 24 },
-        { name: 'Badminton', count: 18, percentage: 13 },
-    ];
-
-    const topVenues = stats.topVenues || [
-        { name: 'Khan Sports Complex', bookings: 28 },
-        { name: 'Lahore Arena', bookings: 22 },
-        { name: 'Elite Sports Hub', bookings: 15 },
-        { name: 'Model Town Club', bookings: 12 },
-    ];
+    const weeklyBreakdown = stats.weeklyBreakdown || [];
+    const topSports = stats.topSports || [];
+    const topVenues = stats.topVenues || [];
 
     return (
         <div className="space-y-8">
@@ -115,28 +96,32 @@ export default function MonthlyDashboard() {
                     <h2 className="text-xl font-bold text-gray-900">Weekly Breakdown</h2>
                 </div>
                 <div className="overflow-x-auto">
-                    <table className="w-full">
-                        <thead>
-                            <tr className="border-b border-gray-200">
-                                <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Week</th>
-                                <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">Registrations</th>
-                                <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">Matches</th>
-                                <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">Earnings</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {weeklyBreakdown.map((week, index) => (
-                                <tr key={index} className="border-b border-gray-100 hover:bg-gray-50">
-                                    <td className="py-3 px-4 font-medium text-gray-900">{week.week}</td>
-                                    <td className="py-3 px-4 text-right text-gray-700">{week.registrations}</td>
-                                    <td className="py-3 px-4 text-right text-gray-700">{week.matches}</td>
-                                    <td className="py-3 px-4 text-right font-semibold text-green-600">
-                                        {formatCurrency(week.earnings)}
-                                    </td>
+                    {weeklyBreakdown.length > 0 ? (
+                        <table className="w-full">
+                            <thead>
+                                <tr className="border-b border-gray-200">
+                                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Week</th>
+                                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">Registrations</th>
+                                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">Matches</th>
+                                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">Earnings</th>
                                 </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                {weeklyBreakdown.map((week, index) => (
+                                    <tr key={index} className="border-b border-gray-100 hover:bg-gray-50">
+                                        <td className="py-3 px-4 font-medium text-gray-900">{week.week}</td>
+                                        <td className="py-3 px-4 text-right text-gray-700">{week.registrations}</td>
+                                        <td className="py-3 px-4 text-right text-gray-700">{week.matches}</td>
+                                        <td className="py-3 px-4 text-right font-semibold text-green-600">
+                                            {formatCurrency(week.earnings)}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    ) : (
+                        <div className="text-center py-8 text-gray-500">No data available for this period.</div>
+                    )}
                 </div>
             </Card>
 
@@ -148,7 +133,7 @@ export default function MonthlyDashboard() {
                         <h2 className="text-xl font-bold text-gray-900">Top Sports This Month</h2>
                     </div>
                     <div className="space-y-4">
-                        {topSports.map((sport, index) => (
+                        {topSports.length > 0 ? topSports.map((sport, index) => (
                             <div key={index}>
                                 <div className="flex items-center justify-between mb-2">
                                     <span className="font-medium text-gray-900">{sport.name}</span>
@@ -161,7 +146,9 @@ export default function MonthlyDashboard() {
                                     ></div>
                                 </div>
                             </div>
-                        ))}
+                        )) : (
+                            <div className="text-center py-4 text-gray-500 text-sm">No sports data available.</div>
+                        )}
                     </div>
                 </Card>
 
@@ -172,7 +159,7 @@ export default function MonthlyDashboard() {
                         <h2 className="text-xl font-bold text-gray-900">Top Venues</h2>
                     </div>
                     <div className="space-y-4">
-                        {topVenues.map((venue, index) => (
+                        {topVenues.length > 0 ? topVenues.map((venue, index) => (
                             <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
                                 <div className="flex items-center space-x-3">
                                     <div className="w-10 h-10 bg-gradient-primary rounded-lg flex items-center justify-center text-white font-bold">
@@ -182,7 +169,9 @@ export default function MonthlyDashboard() {
                                 </div>
                                 <span className="text-sm font-semibold text-primary-600">{venue.bookings} bookings</span>
                             </div>
-                        ))}
+                        )) : (
+                            <div className="text-center py-4 text-gray-500 text-sm">No venue booking data available.</div>
+                        )}
                     </div>
                 </Card>
             </div>

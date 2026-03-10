@@ -44,7 +44,7 @@ export default function TeamsManager() {
         setFormData({
             name: '',
             sport: '',
-            logo: `https://i.pravatar.cc/150?img=${Math.floor(Math.random() * 70)}`,
+            logo: '',
             members: 1,
             wins: 0,
             losses: 0,

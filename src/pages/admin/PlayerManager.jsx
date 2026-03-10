@@ -78,7 +78,7 @@ export default function PlayerManager() {
             matchesPlayed: 0,
             winRate: 0,
             bio: '',
-            avatar: `https://i.pravatar.cc/150?img=${Math.floor(Math.random() * 70)}`,
+            avatar: '',
         });
         setIsFormOpen(true);
     };

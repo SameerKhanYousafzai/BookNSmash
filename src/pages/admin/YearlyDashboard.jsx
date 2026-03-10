@@ -43,32 +43,13 @@ export default function YearlyDashboard() {
 
     if (!stats) return null;
 
-    // Use dummy data for breakdowns if backend doesn't provide them yet, 
-    // but ensure currency and main stats are real
-    const monthlyBreakdown = stats.monthlyBreakdown || [
-        { month: 'Jan', registrations: 120, matches: 85, earnings: stats.totalEarnings * 0.1 },
-        { month: 'Feb', registrations: 95, matches: 70, earnings: stats.totalEarnings * 0.08 },
-        { month: 'Mar', registrations: 110, matches: 95, earnings: stats.totalEarnings * 0.09 },
-        { month: 'Apr', registrations: 130, matches: 105, earnings: stats.totalEarnings * 0.11 },
-        { month: 'May', registrations: 145, matches: 120, earnings: stats.totalEarnings * 0.12 },
-        { month: 'Jun', registrations: 180, matches: 150, earnings: stats.totalEarnings * 0.15 },
-        { month: 'Jul', registrations: 210, matches: 165, earnings: stats.totalEarnings * 0.18 },
-        { month: 'Aug', registrations: 190, matches: 155, earnings: stats.totalEarnings * 0.17 },
-    ];
-
+    const monthlyBreakdown = stats.monthlyBreakdown || [];
+    const topSports = stats.topSports || [];
     const userGrowth = stats.userGrowth || {
-        totalUsers: stats.registrations * 2,
-        activeUsers: stats.registrations,
-        retentionRate: 85
+        totalUsers: 0,
+        activeUsers: 0,
+        retentionRate: 0
     };
-
-    const topSports = stats.topSports || [
-        { name: 'Tennis', count: 425, percentage: 31 },
-        { name: 'Basketball', count: 380, percentage: 28 },
-        { name: 'Football', count: 320, percentage: 24 },
-        { name: 'Cricket', count: 180, percentage: 13 },
-        { name: 'Badminton', count: 65, percentage: 4 },
-    ];
 
     return (
         <div className="space-y-8">
@@ -147,28 +128,32 @@ export default function YearlyDashboard() {
                     <h2 className="text-xl font-bold text-gray-900">Monthly Breakdown</h2>
                 </div>
                 <div className="overflow-x-auto">
-                    <table className="w-full">
-                        <thead>
-                            <tr className="border-b border-gray-200">
-                                <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Month</th>
-                                <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">Registrations</th>
-                                <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">Matches</th>
-                                <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">Earnings</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {monthlyBreakdown.map((month, index) => (
-                                <tr key={index} className="border-b border-gray-100 hover:bg-gray-50">
-                                    <td className="py-3 px-4 font-medium text-gray-900">{month.month}</td>
-                                    <td className="py-3 px-4 text-right text-gray-700">{month.registrations}</td>
-                                    <td className="py-3 px-4 text-right text-gray-700">{month.matches}</td>
-                                    <td className="py-3 px-4 text-right font-semibold text-green-600">
-                                        {formatCurrency(month.earnings)}
-                                    </td>
+                    {monthlyBreakdown.length > 0 ? (
+                        <table className="w-full">
+                            <thead>
+                                <tr className="border-b border-gray-200">
+                                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Month</th>
+                                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">Registrations</th>
+                                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">Matches</th>
+                                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">Earnings</th>
                                 </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                {monthlyBreakdown.map((month, index) => (
+                                    <tr key={index} className="border-b border-gray-100 hover:bg-gray-50">
+                                        <td className="py-3 px-4 font-medium text-gray-900">{month.month}</td>
+                                        <td className="py-3 px-4 text-right text-gray-700">{month.registrations}</td>
+                                        <td className="py-3 px-4 text-right text-gray-700">{month.matches}</td>
+                                        <td className="py-3 px-4 text-right font-semibold text-green-600">
+                                            {formatCurrency(month.earnings)}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    ) : (
+                        <div className="text-center py-8 text-gray-500">No data available for this year yet.</div>
+                    )}
                 </div>
             </Card>
 
@@ -179,7 +164,7 @@ export default function YearlyDashboard() {
                     <h2 className="text-xl font-bold text-gray-900">Top Sports of the Year</h2>
                 </div>
                 <div className="space-y-4">
-                    {topSports.map((sport, index) => (
+                    {topSports.length > 0 ? topSports.map((sport, index) => (
                         <div key={index}>
                             <div className="flex items-center justify-between mb-2">
                                 <div className="flex items-center space-x-3">
@@ -197,7 +182,9 @@ export default function YearlyDashboard() {
                                 ></div>
                             </div>
                         </div>
-                    ))}
+                    )) : (
+                        <div className="text-center py-4 text-gray-500 text-sm">No sports data available.</div>
+                    )}
                 </div>
             </Card>
 

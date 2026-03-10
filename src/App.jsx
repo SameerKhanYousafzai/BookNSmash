@@ -32,6 +32,7 @@ import Unauthorized from './pages/Unauthorized';
 import ContactUs from './pages/ContactUs';
 
 // Admin Pages
+import AdminDashboard from './pages/admin/AdminDashboard';
 import WeeklyDashboard from './pages/admin/WeeklyDashboard';
 import MonthlyDashboard from './pages/admin/MonthlyDashboard';
 import YearlyDashboard from './pages/admin/YearlyDashboard';
@@ -108,7 +109,7 @@ function App() {
                 <AdminLayout />
               </AdminRoute>
             }>
-              <Route index element={<Navigate to="/admin/dashboard/weekly" replace />} />
+              <Route index element={<AdminDashboard />} />
               <Route path="dashboard/weekly" element={<WeeklyDashboard />} />
               <Route path="dashboard/monthly" element={<MonthlyDashboard />} />
               <Route path="dashboard/yearly" element={<YearlyDashboard />} />

@@ -145,8 +145,8 @@ export default function AdminLogin() {
                             <p className="text-xs text-gray-400 mb-2">
                                 <strong className="text-gray-300">Demo Credentials:</strong>
                             </p>
-                            <p className="text-xs text-gray-400">Email: SameerKhanYousafzai@icloud.com</p>
-                            <p className="text-xs text-gray-400">Password: Sameer@123</p>
+                            <p className="text-xs text-gray-400">Email: sameerkhan@icloud.com</p>
+                            <p className="text-xs text-gray-400">Password: Sameer123</p>
                         </div>
                     </div>
 

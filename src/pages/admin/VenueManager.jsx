@@ -40,7 +40,7 @@ export default function VenueManager() {
         pricePerHour: 0,
         openTime: '06:00',
         closeTime: '22:00',
-        images: ['https://images.unsplash.com/photo-1622547748225-3fc4abd2cca0?w=800'],
+        images: [],
         description: '',
     });
 
@@ -81,7 +81,7 @@ export default function VenueManager() {
             pricePerHour: 2000,
             openTime: '06:00',
             closeTime: '22:00',
-            images: ['https://images.unsplash.com/photo-1622547748225-3fc4abd2cca0?w=800'],
+            images: [],
             description: '',
         });
         setIsFormOpen(true);
@@ -212,12 +212,19 @@ export default function VenueManager() {
                 {filteredVenues.length > 0 ? (
                     filteredVenues.map((venue) => (
                         <Card key={venue.id} className="group overflow-hidden flex flex-col">
-                            <div className="h-48 overflow-hidden relative">
-                                <img
-                                    src={venue.images?.[0] || 'https://images.unsplash.com/photo-1622547748225-3fc4abd2cca0?w=800'}
-                                    alt={venue.name}
-                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                                />
+                            <div className="h-48 overflow-hidden relative bg-gray-100 flex items-center justify-center">
+                                {venue.images?.length > 0 ? (
+                                    <img
+                                        src={venue.images[0]}
+                                        alt={venue.name}
+                                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                    />
+                                ) : (
+                                    <div className="flex flex-col items-center justify-center text-gray-400">
+                                        <Camera className="w-8 h-8 mb-2" />
+                                        <span className="text-xs uppercase font-bold">No Image</span>
+                                    </div>
+                                )}
                                 <div className="absolute top-4 right-4 flex gap-1">
                                     <button
                                         onClick={() => handleEdit(venue)}

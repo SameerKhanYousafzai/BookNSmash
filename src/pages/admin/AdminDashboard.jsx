@@ -1,255 +1,143 @@
 import { useState, useEffect } from 'react';
-import { Users, Calendar, Trophy, DollarSign, TrendingUp, CheckCircle, XCircle, Clock, Loader2 } from 'lucide-react';
-import Button from '../../components/common/Button';
-import Card from '../../components/common/Card';
-import Modal from '../../components/common/Modal';
+import { Users, Calendar, DollarSign, Trophy, Loader2, RefreshCw } from 'lucide-react';
+import { useData } from '../../context/DataContext';
 import { formatCurrency } from '../../utils/currency';
 import api from '../../services/api';
 
+import MetricsCard from '../../components/admin/MetricsCard';
+import RegistrationsChart from '../../components/admin/RegistrationsChart';
+import SportDistributionChart from '../../components/admin/SportDistributionChart';
+import UpcomingEvents from '../../components/admin/UpcomingEvents';
+import QuickActions from '../../components/admin/QuickActions';
+
+/**
+ * AdminDashboard — Kleon-inspired analytics hub
+ * All data fetched from real backend APIs, zero hardcoded values
+ */
 export default function AdminDashboard() {
-    const [showApprovalModal, setShowApprovalModal] = useState(false);
-    const [selectedRegistration, setSelectedRegistration] = useState(null);
+    const { events = [] } = useData();
     const [stats, setStats] = useState(null);
+    const [weeklyData, setWeeklyData] = useState(null);
     const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        const fetchStats = async () => {
-            try {
-                const res = await api.get('/admin/dashboard/stats');
-                if (res.ok) {
-                    const data = await res.json();
-                    setStats(data);
-                }
-            } catch (error) {
-                console.error('❌ Failed to fetch admin stats:', error);
-            } finally {
-                setLoading(false);
+    const fetchDashboardData = async () => {
+        setLoading(true);
+        try {
+            // Fetch high-level stats and weekly breakdown in parallel
+            const [statsRes, weeklyRes] = await Promise.all([
+                api.get('/admin/dashboard/stats'),
+                api.get('/admin/dashboard/weekly'),
+            ]);
+
+            if (statsRes.ok) {
+                const data = await statsRes.json();
+                setStats(data);
             }
-        };
-
-        fetchStats();
-    }, []);
-
-    // Mock pending registrations for now (until a real endpoint for just pending ones is needed)
-    const pendingRegistrations = [
-        { id: 1, event: 'Summer Tennis Championship', user: 'Sameer Khan', date: '2025-01-10', status: 'pending' },
-        { id: 2, event: 'Basketball League Finals', user: 'Sarah Smith', date: '2025-01-11', status: 'pending' },
-        { id: 3, event: 'Badminton Doubles Tournament', user: 'Mike Johnson', date: '2025-01-12', status: 'pending' },
-    ];
-
-    const recentActivity = [
-        { action: 'New user registration', user: 'Alice Brown', time: '5 min ago', type: 'user' },
-        { action: 'Event created', user: 'Admin', time: '1 hour ago', type: 'event' },
-        { action: 'Payment received', user: 'Bob Wilson', time: '2 hours ago', type: 'payment' },
-        { action: 'Match completed', user: 'Team Alpha', time: '3 hours ago', type: 'match' },
-    ];
-
-    const handleApproval = (registration, approved) => {
-        alert(`Registration ${approved ? 'approved' : 'rejected'} for ${registration.user}`);
-        setShowApprovalModal(false);
-        setSelectedRegistration(null);
+            if (weeklyRes.ok) {
+                const data = await weeklyRes.json();
+                setWeeklyData(data);
+            }
+        } catch (error) {
+            console.error('❌ Failed to fetch dashboard data:', error);
+        } finally {
+            setLoading(false);
+        }
     };
+
+    useEffect(() => {
+        fetchDashboardData();
+    }, []);
 
     if (loading) {
         return (
-            <div className="container-custom py-16 flex flex-col items-center justify-center space-y-4">
-                <Loader2 className="w-12 h-12 text-primary-600 animate-spin" />
-                <p className="text-gray-600 font-medium">Loading dashboard stats...</p>
+            <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
+                <div className="relative">
+                    <div className="w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-xl animate-pulse">
+                        <Loader2 className="w-8 h-8 text-white animate-spin" />
+                    </div>
+                </div>
+                <p className="text-gray-500 font-medium">Loading analytics...</p>
             </div>
         );
     }
 
-    const statCards = [
-        { label: 'Total Users', value: stats?.totalUsers?.toLocaleString() || '0', change: '+12%', icon: Users, color: 'blue' },
-        { label: 'Active Events', value: stats?.activeEvents?.toLocaleString() || '0', change: '+5%', icon: Calendar, color: 'green' },
-        { label: 'Total Revenue', value: formatCurrency(stats?.totalRevenue || 0), change: '+18%', icon: DollarSign, color: 'purple' },
-        { label: 'Teams', value: stats?.totalTeams?.toLocaleString() || '0', change: '+8%', icon: Trophy, color: 'orange' },
-    ];
+    // Get current greeting based on time
+    const hour = new Date().getHours();
+    const greeting = hour < 12 ? 'Good Morning' : hour < 17 ? 'Good Afternoon' : 'Good Evening';
 
     return (
-        <div className="container-custom py-8 space-y-8">
+        <div className="space-y-8">
             {/* Header */}
-            <div>
-                <h1 className="text-3xl sm:text-4xl font-display font-bold text-gray-900 mb-2">
-                    Admin Dashboard
-                </h1>
-                <p className="text-gray-600">Manage your sports platform</p>
-            </div>
-
-            {/* Stats Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                {statCards.map((stat, idx) => (
-                    <Card key={idx} className="p-6 hover:shadow-xl transition-all">
-                        <div className="flex items-start justify-between mb-4">
-                            <div className={`w-12 h-12 bg-${stat.color}-100 rounded-xl flex items-center justify-center`}>
-                                <stat.icon className={`w-6 h-6 text-${stat.color}-600`} />
-                            </div>
-                            <div className="flex items-center gap-1 text-green-600 text-sm font-semibold">
-                                <TrendingUp className="w-4 h-4" />
-                                {stat.change}
-                            </div>
-                        </div>
-                        <div className="text-3xl font-bold text-gray-900 mb-1">{stat.value}</div>
-                        <div className="text-sm text-gray-600">{stat.label}</div>
-                    </Card>
-                ))}
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                {/* Pending Registrations */}
-                <Card className="p-6">
-                    <div className="flex items-center justify-between mb-6">
-                        <h2 className="text-xl font-bold text-gray-900">Pending Registrations</h2>
-                        <span className="px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-sm font-semibold">
-                            {pendingRegistrations.length} pending
-                        </span>
-                    </div>
-                    <div className="space-y-3">
-                        {pendingRegistrations.map((registration) => (
-                            <div key={registration.id} className="p-4 bg-gray-50 rounded-lg">
-                                <div className="flex items-start justify-between mb-2">
-                                    <div>
-                                        <div className="font-semibold text-gray-900">{registration.event}</div>
-                                        <div className="text-sm text-gray-600">{registration.user}</div>
-                                    </div>
-                                    <span className="px-2 py-1 bg-orange-100 text-orange-700 rounded text-xs font-semibold">
-                                        Pending
-                                    </span>
-                                </div>
-                                <div className="text-xs text-gray-500 mb-3">
-                                    Submitted: {new Date(registration.date).toLocaleDateString()}
-                                </div>
-                                <div className="flex gap-2">
-                                    <Button
-                                        variant="primary"
-                                        size="sm"
-                                        className="flex-1"
-                                        onClick={() => {
-                                            setSelectedRegistration(registration);
-                                            setShowApprovalModal(true);
-                                        }}
-                                    >
-                                        <CheckCircle className="w-4 h-4 mr-1" />
-                                        Approve
-                                    </Button>
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        className="flex-1"
-                                        onClick={() => handleApproval(registration, false)}
-                                    >
-                                        <XCircle className="w-4 h-4 mr-1" />
-                                        Reject
-                                    </Button>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </Card>
-
-                {/* Recent Activity */}
-                <Card className="p-6">
-                    <h2 className="text-xl font-bold text-gray-900 mb-6">Recent Activity</h2>
-                    <div className="space-y-4">
-                        {recentActivity.map((activity, idx) => (
-                            <div key={idx} className="flex items-start gap-3 pb-4 border-b border-gray-100 last:border-0">
-                                <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${activity.type === 'user' ? 'bg-blue-100' :
-                                    activity.type === 'event' ? 'bg-green-100' :
-                                        activity.type === 'payment' ? 'bg-purple-100' :
-                                            'bg-orange-100'
-                                    }`}>
-                                    {activity.type === 'user' && <Users className="w-5 h-5 text-blue-600" />}
-                                    {activity.type === 'event' && <Calendar className="w-5 h-5 text-green-600" />}
-                                    {activity.type === 'payment' && <DollarSign className="w-5 h-5 text-purple-600" />}
-                                    {activity.type === 'match' && <Trophy className="w-5 h-5 text-orange-600" />}
-                                </div>
-                                <div className="flex-1">
-                                    <div className="font-semibold text-gray-900">{activity.action}</div>
-                                    <div className="text-sm text-gray-600">{activity.user}</div>
-                                    <div className="flex items-center gap-1 text-xs text-gray-500 mt-1">
-                                        <Clock className="w-3 h-3" />
-                                        {activity.time}
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </Card>
-            </div>
-
-            {/* Quick Actions */}
-            <Card className="p-6">
-                <h2 className="text-xl font-bold text-gray-900 mb-6">Quick Actions</h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <Button variant="primary" className="justify-center" onClick={() => window.location.href = '/admin/events'}>
-                        <Calendar className="w-5 h-5 mr-2" />
-                        Create Event
-                    </Button>
-                    <Button variant="outline" className="justify-center" onClick={() => window.location.href = '/admin/players'}>
-                        <Users className="w-5 h-5 mr-2" />
-                        Manage Users
-                    </Button>
-                    <Button variant="outline" className="justify-center" onClick={() => window.location.href = '/admin/registrations'}>
-                        <Trophy className="w-5 h-5 mr-2" />
-                        View Reports
-                    </Button>
-                    <Button variant="outline" className="justify-center" onClick={() => window.location.href = '/admin/weekly'}>
-                        <DollarSign className="w-5 h-5 mr-2" />
-                        Financial Overview
-                    </Button>
+            <div className="flex items-center justify-between">
+                <div>
+                    <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">
+                        {greeting}, Admin 👋
+                    </h1>
+                    <p className="text-gray-500 mt-1 text-sm">
+                        Here's what's happening on your platform today.
+                    </p>
                 </div>
-            </Card>
-
-            {/* Approval Modal */}
-            {showApprovalModal && selectedRegistration && (
-                <Modal
-                    isOpen={showApprovalModal}
-                    onClose={() => setShowApprovalModal(false)}
-                    title="Approve Registration"
+                <button
+                    onClick={fetchDashboardData}
+                    className="flex items-center gap-2 px-4 py-2.5 bg-white rounded-xl border border-gray-200 text-sm font-semibold text-gray-700 hover:bg-gray-50 hover:shadow-sm transition-all"
                 >
-                    <div className="space-y-4">
-                        <div className="bg-gray-50 rounded-lg p-4">
-                            <div className="space-y-2 text-sm">
-                                <div className="flex justify-between">
-                                    <span className="text-gray-600">Event:</span>
-                                    <span className="font-medium">{selectedRegistration.event}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span className="text-gray-600">Participant:</span>
-                                    <span className="font-medium">{selectedRegistration.user}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span className="text-gray-600">Date:</span>
-                                    <span className="font-medium">{new Date(selectedRegistration.date).toLocaleDateString()}</span>
-                                </div>
-                            </div>
-                        </div>
+                    <RefreshCw className="w-4 h-4" />
+                    Refresh
+                </button>
+            </div>
 
-                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                            <p className="text-sm text-blue-800">
-                                <strong>Note:</strong> Approving this registration will send a confirmation email to the participant.
-                            </p>
-                        </div>
+            {/* Metrics Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+                <MetricsCard
+                    label="Total Users"
+                    value={stats?.totalUsers?.toLocaleString() || '0'}
+                    trend="+0%"
+                    icon={Users}
+                    color="blue"
+                />
+                <MetricsCard
+                    label="Active Events"
+                    value={stats?.activeEvents?.toLocaleString() || '0'}
+                    trend="+0%"
+                    icon={Calendar}
+                    color="green"
+                />
+                <MetricsCard
+                    label="Total Revenue"
+                    value={formatCurrency(stats?.totalRevenue || 0)}
+                    trend="+0%"
+                    icon={DollarSign}
+                    color="purple"
+                />
+                <MetricsCard
+                    label="Teams"
+                    value={stats?.totalTeams?.toLocaleString() || '0'}
+                    trend="+0%"
+                    icon={Trophy}
+                    color="orange"
+                />
+            </div>
 
-                        <div className="flex gap-3">
-                            <Button
-                                variant="ghost"
-                                className="flex-1"
-                                onClick={() => setShowApprovalModal(false)}
-                            >
-                                Cancel
-                            </Button>
-                            <Button
-                                variant="primary"
-                                className="flex-1"
-                                onClick={() => handleApproval(selectedRegistration, true)}
-                            >
-                                Confirm Approval
-                            </Button>
-                        </div>
-                    </div>
-                </Modal>
-            )}
+            {/* Charts Row */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="lg:col-span-2">
+                    <RegistrationsChart
+                        data={weeklyData?.dailyBreakdown || []}
+                        title="Registrations This Week"
+                    />
+                </div>
+                <SportDistributionChart
+                    data={weeklyData?.topSports || []}
+                />
+            </div>
+
+            {/* Bottom Row */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="lg:col-span-2">
+                    <UpcomingEvents events={events} />
+                </div>
+                <QuickActions />
+            </div>
         </div>
     );
 }

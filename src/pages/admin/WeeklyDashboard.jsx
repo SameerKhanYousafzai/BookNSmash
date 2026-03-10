@@ -92,28 +92,32 @@ export default function WeeklyDashboard() {
                     <h2 className="text-xl font-bold text-gray-900">Daily Breakdown</h2>
                 </div>
                 <div className="overflow-x-auto">
-                    <table className="w-full">
-                        <thead>
-                            <tr className="border-b border-gray-200">
-                                <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Day</th>
-                                <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">Registrations</th>
-                                <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">Matches</th>
-                                <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">Earnings</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {stats.dailyBreakdown.map((day, index) => (
-                                <tr key={index} className="border-b border-gray-100 hover:bg-gray-50">
-                                    <td className="py-3 px-4 font-medium text-gray-900">{day.day}</td>
-                                    <td className="py-3 px-4 text-right text-gray-700">{day.registrations}</td>
-                                    <td className="py-3 px-4 text-right text-gray-700">{day.matches}</td>
-                                    <td className="py-3 px-4 text-right font-semibold text-green-600">
-                                        {formatCurrency(day.earnings)}
-                                    </td>
+                    {stats.dailyBreakdown?.length > 0 ? (
+                        <table className="w-full">
+                            <thead>
+                                <tr className="border-b border-gray-200">
+                                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Day</th>
+                                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">Registrations</th>
+                                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">Matches</th>
+                                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">Earnings</th>
                                 </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                {stats.dailyBreakdown.map((day, index) => (
+                                    <tr key={index} className="border-b border-gray-100 hover:bg-gray-50">
+                                        <td className="py-3 px-4 font-medium text-gray-900">{day.day}</td>
+                                        <td className="py-3 px-4 text-right text-gray-700">{day.registrations}</td>
+                                        <td className="py-3 px-4 text-right text-gray-700">{day.matches}</td>
+                                        <td className="py-3 px-4 text-right font-semibold text-green-600">
+                                            {formatCurrency(day.earnings)}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    ) : (
+                        <div className="text-center py-8 text-gray-500">No daily data available for this week.</div>
+                    )}
                 </div>
             </Card>
 
@@ -124,7 +128,7 @@ export default function WeeklyDashboard() {
                     <h2 className="text-xl font-bold text-gray-900">Top Sports This Week</h2>
                 </div>
                 <div className="space-y-4">
-                    {stats.topSports.map((sport, index) => (
+                    {stats.topSports?.length > 0 ? stats.topSports.map((sport, index) => (
                         <div key={index}>
                             <div className="flex items-center justify-between mb-2">
                                 <span className="font-medium text-gray-900">{sport.name}</span>
@@ -137,7 +141,9 @@ export default function WeeklyDashboard() {
                                 ></div>
                             </div>
                         </div>
-                    ))}
+                    )) : (
+                        <div className="text-center py-4 text-gray-500 text-sm">No sports data available.</div>
+                    )}
                 </div>
             </Card>
 
