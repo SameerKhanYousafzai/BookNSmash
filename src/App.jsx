@@ -5,6 +5,7 @@ import Layout from './components/layout/Layout';
 import AdminLayout from './components/layout/AdminLayout';
 import ProtectedRoute from './components/routes/ProtectedRoute';
 import AdminRoute from './components/routes/AdminRoute';
+import { ThemeProvider } from './context/ThemeContext';
 import ScrollToTop from './components/common/ScrollToTop';
 
 // Auth Pages
@@ -106,7 +107,9 @@ function App() {
             {/* Admin Routes - With Admin Layout */}
             <Route path="/admin" element={
               <AdminRoute>
-                <AdminLayout />
+                <ThemeProvider>
+                  <AdminLayout />
+                </ThemeProvider>
               </AdminRoute>
             }>
               <Route index element={<AdminDashboard />} />

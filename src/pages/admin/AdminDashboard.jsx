@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Users, Calendar, DollarSign, Trophy, Loader2, RefreshCw } from 'lucide-react';
 import { useData } from '../../context/DataContext';
+import { useTheme } from '../../context/ThemeContext';
 import { formatCurrency } from '../../utils/currency';
 import api from '../../services/api';
 
@@ -8,14 +9,15 @@ import MetricsCard from '../../components/admin/MetricsCard';
 import RegistrationsChart from '../../components/admin/RegistrationsChart';
 import SportDistributionChart from '../../components/admin/SportDistributionChart';
 import UpcomingEvents from '../../components/admin/UpcomingEvents';
-import QuickActions from '../../components/admin/QuickActions';
+import TopSportsCard from '../../components/admin/TopSportsCard';
 
 /**
- * AdminDashboard — Kleon-inspired analytics hub
+ * AdminDashboard — Kleon-inspired analytics hub with dark/light theme
  * All data fetched from real backend APIs, zero hardcoded values
  */
 export default function AdminDashboard() {
     const { events = [] } = useData();
+    const { isDark } = useTheme();
     const [stats, setStats] = useState(null);
     const [weeklyData, setWeeklyData] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -23,7 +25,6 @@ export default function AdminDashboard() {
     const fetchDashboardData = async () => {
         setLoading(true);
         try {
-            // Fetch high-level stats and weekly breakdown in parallel
             const [statsRes, weeklyRes] = await Promise.all([
                 api.get('/admin/dashboard/stats'),
                 api.get('/admin/dashboard/weekly'),
@@ -56,12 +57,11 @@ export default function AdminDashboard() {
                         <Loader2 className="w-8 h-8 text-white animate-spin" />
                     </div>
                 </div>
-                <p className="text-gray-500 font-medium">Loading analytics...</p>
+                <p className={`font-medium ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Loading analytics...</p>
             </div>
         );
     }
 
-    // Get current greeting based on time
     const hour = new Date().getHours();
     const greeting = hour < 12 ? 'Good Morning' : hour < 17 ? 'Good Afternoon' : 'Good Evening';
 
@@ -70,16 +70,19 @@ export default function AdminDashboard() {
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">
+                    <h1 className={`text-2xl sm:text-3xl font-extrabold tracking-tight ${isDark ? 'text-white' : 'text-gray-900'}`}>
                         {greeting}, Admin 👋
                     </h1>
-                    <p className="text-gray-500 mt-1 text-sm">
+                    <p className={`mt-1 text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
                         Here's what's happening on your platform today.
                     </p>
                 </div>
                 <button
                     onClick={fetchDashboardData}
-                    className="flex items-center gap-2 px-4 py-2.5 bg-white rounded-xl border border-gray-200 text-sm font-semibold text-gray-700 hover:bg-gray-50 hover:shadow-sm transition-all"
+                    className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-semibold transition-all ${isDark
+                            ? 'bg-gray-800 border-gray-700 text-gray-200 hover:bg-gray-700'
+                            : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50 hover:shadow-sm'
+                        }`}
                 >
                     <RefreshCw className="w-4 h-4" />
                     Refresh
@@ -136,7 +139,9 @@ export default function AdminDashboard() {
                 <div className="lg:col-span-2">
                     <UpcomingEvents events={events} />
                 </div>
-                <QuickActions />
+                <TopSportsCard
+                    data={weeklyData?.topSports || []}
+                />
             </div>
         </div>
     );

@@ -5,6 +5,7 @@ import Card from '../components/common/Card';
 import { useData } from '../context/DataContext';
 import { formatCurrency } from '../utils/currency';
 import { useState } from 'react';
+import sportsHeroImg from '../assets/sports-hero.png';
 
 export default function Home() {
     const { events, loading, sportsCategories } = useData();
@@ -20,26 +21,42 @@ export default function Home() {
             <section className="relative bg-gradient-to-br from-primary-600 via-primary-700 to-secondary-600 text-white overflow-hidden">
                 <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4xIj48cGF0aCBkPSJNMzYgMzRjMC0yLjIxLTEuNzktNC00LTRzLTQgMS43OS00IDQgMS43OSA0IDQgNCA0LTEuNzkgNC00em0wLTEwYzAtMi4yMS0xLjc5LTQtNC00cy00IDEuNzktNCA0IDEuNzkgNCA0IDQgNC0xLjc5IDQtNHoiLz48L2c+PC9nPjwvc3ZnPg==')] opacity-20"></div>
 
-                <div className="container-custom relative py-20 lg:py-32">
-                    <div className="max-w-3xl">
-                        <h1 className="text-4xl sm:text-5xl lg:text-6xl font-display font-bold mb-6 animate-fade-in">
-                            Book Your Game,<br />
-                            <span className="text-secondary-00">Smash Your Goals</span>
-                        </h1>
-                        <p className="text-xl sm:text-2xl text-primary-100 mb-8 animate-fade-in-delay">
-                            Join the ultimate sports community. Find matches, book venues, and compete in tournaments.
-                        </p>
-                        <div className="flex flex-wrap gap-4 animate-fade-in-delay-2">
-                            <Link to="/matches">
-                                <Button variant="secondary" size="lg" className="shadow-xl hover:shadow-2xl">
-                                    Find a Match
-                                </Button>
-                            </Link>
-                            <Link to="/events">
-                                <Button variant="outline" size="lg" className="bg-white/10 backdrop-blur-sm border-white/30 text-white hover:bg-white/20">
-                                    Browse Events
-                                </Button>
-                            </Link>
+                <div className="container-custom relative py-20 lg:py-28">
+                    <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-8">
+                        {/* Left Column — Text (55%) */}
+                        <div className="w-full lg:w-[55%]">
+                            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-display font-bold mb-6 animate-fade-in">
+                                Book Your Game,<br />
+                                <span className="text-secondary-00">Smash Your Goals</span>
+                            </h1>
+                            <p className="text-xl sm:text-2xl text-primary-100 mb-8 animate-fade-in-delay">
+                                Join the ultimate sports community. Find matches, book venues, and compete in tournaments.
+                            </p>
+                            <div className="flex flex-wrap gap-4 animate-fade-in-delay-2">
+                                <Link to="/matches">
+                                    <Button variant="secondary" size="lg" className="shadow-xl hover:shadow-2xl">
+                                        Find a Match
+                                    </Button>
+                                </Link>
+                                <Link to="/events">
+                                    <Button variant="outline" size="lg" className="bg-white/10 backdrop-blur-sm border-white/30 text-white hover:bg-white/20">
+                                        Browse Events
+                                    </Button>
+                                </Link>
+                            </div>
+                        </div>
+
+                        {/* Right Column — Illustration (45%) */}
+                        <div className="w-full lg:w-[45%] relative" style={{ mixBlendMode: 'screen' }}>
+                            <img
+                                src={sportsHeroImg}
+                                alt="Sports players illustration"
+                                className="w-full max-w-lg mx-auto lg:max-w-none lg:w-[110%] select-none pointer-events-none animate-fade-in-delay"
+                                style={{
+                                    mixBlendMode: 'screen',
+                                    marginBottom: '-2rem',
+                                }}
+                            />
                         </div>
                     </div>
                 </div>
