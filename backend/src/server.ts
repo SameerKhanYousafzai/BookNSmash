@@ -160,7 +160,7 @@ const startServer = async () => {
         await ensureAdminUser();
 
         // Step 4: Bind to the resolved port
-        server = app.listen(resolvedPort, () => {
+        server = app.listen(resolvedPort, '0.0.0.0', () => {
             // Write the port file for Vite proxy
             writePortFile(resolvedPort);
 
