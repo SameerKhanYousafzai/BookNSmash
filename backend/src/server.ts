@@ -144,8 +144,12 @@ const startServer = async () => {
     console.log(`   Environment: ${config.nodeEnv}`);
 
     try {
-        // Step 1: Find an available port
-        const resolvedPort = await findAvailablePort(preferredPort);
+        // Step 1: Resolve port — in production (Railway), use the assigned PORT directly;
+        // in development, scan for an available port if the preferred one is busy.
+        const isProduction = config.nodeEnv === 'production';
+        const resolvedPort = isProduction
+            ? preferredPort
+            : await findAvailablePort(preferredPort);
 
         if (resolvedPort !== preferredPort) {
             console.log(`\n📌 Using port ${resolvedPort} (preferred port ${preferredPort} was in use)`);
