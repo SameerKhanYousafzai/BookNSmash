@@ -30,14 +30,12 @@ export const AuthProvider = ({ children }) => {
     }, []);
 
     /**
-     * Helper: persist auth state to localStorage
+     * Helper: persist auth state to localStorage (UI cache only, secure auth is in HTTP-only cookies)
      */
-    const persistAuth = (user, role, accessToken, refreshToken) => {
+    const persistAuth = (user, role) => {
         localStorage.setItem('isAuthenticated', 'true');
         localStorage.setItem('userRole', role);
         localStorage.setItem('currentUser', JSON.stringify(user));
-        localStorage.setItem('accessToken', accessToken);
-        if (refreshToken) localStorage.setItem('refreshToken', refreshToken);
     };
 
     /**
@@ -56,7 +54,7 @@ export const AuthProvider = ({ children }) => {
             setIsAuthenticated(true);
             setUserRole(data.user.role || 'USER');
             setCurrentUser(data.user);
-            persistAuth(data.user, data.user.role || 'USER', data.accessToken, data.refreshToken);
+            persistAuth(data.user, data.user.role || 'USER');
 
             navigate('/');
             return { success: true };
@@ -84,7 +82,7 @@ export const AuthProvider = ({ children }) => {
             setIsAuthenticated(true);
             setUserRole('USER');
             setCurrentUser(data.user);
-            persistAuth(data.user, 'USER', data.accessToken, data.refreshToken);
+            persistAuth(data.user, 'USER');
 
             navigate('/');
             return { success: true };
@@ -112,7 +110,7 @@ export const AuthProvider = ({ children }) => {
             setIsAuthenticated(true);
             setUserRole('ADMIN');
             setCurrentUser(data.user);
-            persistAuth(data.user, 'ADMIN', data.accessToken, data.refreshToken);
+            persistAuth(data.user, 'ADMIN');
 
             navigate('/admin/dashboard/weekly');
             return { success: true };
@@ -127,7 +125,12 @@ export const AuthProvider = ({ children }) => {
     /**
      * Logout — clears all authentication data
      */
-    const logout = () => {
+    const logout = async () => {
+        try {
+            await api.post('/auth/logout');
+        } catch (e) {
+            console.error('Logout failed:', e);
+        }
         setIsAuthenticated(false);
         setUserRole(null);
         setCurrentUser(null);
@@ -135,8 +138,6 @@ export const AuthProvider = ({ children }) => {
         localStorage.removeItem('isAuthenticated');
         localStorage.removeItem('userRole');
         localStorage.removeItem('currentUser');
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
 
         navigate('/login');
     };

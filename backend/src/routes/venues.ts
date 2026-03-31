@@ -10,6 +10,12 @@ import {
     updateVenue,
     deleteVenue,
 } from '../models/Venue';
+import {
+    createBooking,
+    getVenueAvailability,
+    getUserBookings
+} from '../models/VenueBooking';
+import { createVenueBookingSchema } from '../utils/validators';
 
 const router = Router();
 
@@ -125,6 +131,60 @@ router.delete('/:id', authenticate, requireRole('ADMIN'), async (req: Request, r
         console.error('❌ Failed to delete venue:', error);
         res.status(500).json({
             error: 'Failed to delete venue',
+            message: error instanceof Error ? error.message : 'Unknown error',
+        });
+    }
+});
+
+// GET /api/venues/bookings/me - Get user's bookings (authenticated)
+router.get('/bookings/me', authenticate, async (req: Request, res: Response) => {
+    try {
+        const bookings = await getUserBookings(req.user!.userId);
+        res.json({ bookings });
+    } catch (error) {
+        console.error('❌ Failed to fetch bookings:', error);
+        res.status(500).json({
+            error: 'Failed to fetch bookings',
+            message: error instanceof Error ? error.message : 'Unknown error',
+        });
+    }
+});
+
+// GET /api/venues/:id/availability - Get venue availability (public)
+router.get('/:id/availability', async (req: Request, res: Response) => {
+    try {
+        const availability = await getVenueAvailability(req.params.id);
+        res.json({ availability });
+    } catch (error) {
+        console.error('❌ Failed to check availability:', error);
+        res.status(500).json({
+            error: 'Failed to check availability',
+            message: error instanceof Error ? error.message : 'Unknown error',
+        });
+    }
+});
+
+// POST /api/venues/:id/book - Book a venue (authenticated)
+router.post('/:id/book', authenticate, validate(createVenueBookingSchema), async (req: Request, res: Response) => {
+    try {
+        const payload = {
+            userId: req.user!.userId,
+            venueId: req.params.id,
+            startTime: req.body.startTime,
+            endTime: req.body.endTime,
+        };
+
+        const booking = await createBooking(payload);
+
+        res.status(201).json({
+            message: 'Venue booked successfully',
+            booking,
+        });
+    } catch (error) {
+        console.error('❌ Failed to book venue:', error);
+        const status = error instanceof Error && error.message.includes('booked') ? 409 : 400;
+        res.status(status).json({
+            error: 'Booking failed',
             message: error instanceof Error ? error.message : 'Unknown error',
         });
     }

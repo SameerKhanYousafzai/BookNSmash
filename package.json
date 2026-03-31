@@ -1,42 +1,16 @@
 {
-  "name": "sports",
+  "name": "book-n-smash-root",
   "private": true,
-  "version": "0.0.0",
-  "type": "module",
+  "version": "1.0.0",
   "scripts": {
-    "predev": "node scripts/cleanup.cjs",
-    "dev": "concurrently --kill-others-on-fail -n frontend,backend -c blue,yellow \"vite\" \"cd backend && npm run dev\"",
-    "dev:frontend": "vite",
-    "dev:backend": "cd backend && npm run dev",
-    "install-all": "npm install && cd backend && npm install",
-    "start": "vite",
-    "build": "vite build",
-    "lint": "eslint .",
-    "preview": "vite preview"
-  },
-  "dependencies": {
-    "clsx": "^2.1.1",
-    "lucide-react": "^0.562.0",
-    "react": "^19.2.0",
-    "react-dom": "^19.2.0",
-    "react-icons": "^5.5.0",
-    "react-router-dom": "^7.11.0",
-    "recharts": "^3.8.0",
-    "styled-components": "^6.1.19"
+    "dev": "concurrently --kill-others-on-fail -n frontend,backend -c blue,yellow \"npm run dev --prefix frontend\" \"npm run dev --prefix backend\"",
+    "dev:frontend": "npm run dev --prefix frontend",
+    "dev:backend": "npm run dev --prefix backend",
+    "install-all": "npm install && npm install --prefix frontend && npm install --prefix backend",
+    "build": "npm run build --prefix frontend",
+    "lint": "npm run lint --prefix frontend"
   },
   "devDependencies": {
-    "@eslint/js": "^9.39.1",
-    "@types/react": "^19.2.5",
-    "@types/react-dom": "^19.2.3",
-    "@vitejs/plugin-react": "^5.1.1",
-    "autoprefixer": "^10.4.23",
-    "concurrently": "^9.2.1",
-    "eslint": "^9.39.1",
-    "eslint-plugin-react-hooks": "^7.0.1",
-    "eslint-plugin-react-refresh": "^0.4.24",
-    "globals": "^16.5.0",
-    "postcss": "^8.5.6",
-    "tailwindcss": "^3.4.19",
-    "vite": "^7.2.4"
+    "concurrently": "^9.2.1"
   }
 }

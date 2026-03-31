@@ -61,7 +61,9 @@ export const findEventById = async (id: string): Promise<Event | undefined> => {
 export const getAllEvents = async (filters?: {
     sport?: string;
     status?: string;
-}): Promise<Event[]> => {
+    limit?: number;
+    offset?: number;
+}): Promise<{ events: Event[], total: number }> => {
     const conditions = [];
 
     if (filters?.sport) {
@@ -73,11 +75,21 @@ export const getAllEvents = async (filters?: {
         );
     }
 
-    if (conditions.length > 0) {
-        return db.select().from(events).where(and(...conditions));
-    }
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
-    return db.select().from(events);
+    const [{ count }] = await db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(events)
+        .where(whereClause);
+
+    const rows = await db
+        .select()
+        .from(events)
+        .where(whereClause)
+        .limit(filters?.limit ?? 50)
+        .offset(filters?.offset ?? 0);
+
+    return { events: rows, total: count };
 };
 
 export const updateEvent = async (

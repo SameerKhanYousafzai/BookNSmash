@@ -126,6 +126,10 @@ export default function EventManager() {
                 status: formData.status || 'UPCOMING',
             };
 
+            const token = localStorage.getItem('accessToken');
+            const role = localStorage.getItem('userRole');
+            console.log('🔑 [EventManager] Pre-flight Check - Token exists:', !!token, 'Role:', role);
+
             console.log('🌏 [EventManager] Dispatching API request...', payload);
 
             if (editingEvent) {

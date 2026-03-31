@@ -1,10 +1,15 @@
-import React from 'react';
 import { Trophy, Calendar, MapPin, Award, TrendingUp, Clock } from 'lucide-react';
 import Card from '../components/common/Card';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
-import { userMatchHistory } from '../data/authMockData';
 import Button from '../components/common/Button';
+
+// Mock data until a /me matches endpoint is created
+const userMatchHistory = [
+    { id: 1, sport: 'Tennis', result: 'Won', score: '6-4, 6-3', date: '2024-03-15', time: '18:00', venue: 'Central Courts', opponent: 'Alex Smith', status: 'Completed' },
+    { id: 2, sport: 'Basketball', result: 'Lost', date: '2024-03-10', time: '19:30', venue: 'Downtown Arena', status: 'Completed' },
+    { id: 3, sport: 'Tennis', date: '2024-03-25', time: '10:00', venue: 'Central Courts', opponent: 'Chris Johnson', status: 'Upcoming' }
+];
 
 /**
  * UserProfile Page

@@ -3,18 +3,24 @@ import { verifyAccessToken } from '../services/jwt';
 
 export const authenticate = (req: Request, res: Response, next: NextFunction): void => {
     try {
-        // Extract token from Authorization header
-        const authHeader = req.headers.authorization;
+        let token: string | undefined;
 
-        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        // 1. Check cookies for HTTP-only token
+        if (req.cookies && req.cookies.accessToken) {
+            token = req.cookies.accessToken;
+        } 
+        // 2. Fallback to Authorization header
+        else if (req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
+            token = req.headers.authorization.substring(7);
+        }
+
+        if (!token) {
             res.status(401).json({
                 error: 'Authentication required',
                 message: 'No token provided',
             });
             return;
         }
-
-        const token = authHeader.substring(7); // Remove 'Bearer ' prefix
 
         // Verify token
         const payload = verifyAccessToken(token);

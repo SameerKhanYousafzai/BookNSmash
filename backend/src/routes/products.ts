@@ -7,6 +7,9 @@ import {
     deleteProduct
 } from '../models/Product';
 import { authenticate, authorize } from '../middleware/auth';
+import { validate } from '../middleware/validate';
+import { checkoutSchema } from '../utils/validators';
+import { checkoutSession, getUserOrders } from '../models/ShopOrder';
 
 const router = Router();
 
@@ -74,6 +77,32 @@ router.delete('/:id', authenticate, authorize('ADMIN'), async (req: Request, res
         res.json({ message: 'Product deleted successfully' });
     } catch (error) {
         res.status(500).json({ error: 'Failed to delete product' });
+    }
+});
+
+// POST /api/products/checkout - Process Cartesian Cart
+router.post('/checkout', authenticate, validate(checkoutSchema), async (req: Request, res: Response) => {
+    try {
+        const payload = {
+            userId: req.user!.userId,
+            items: req.body.items,
+        };
+        const order = await checkoutSession(payload);
+        res.status(201).json({ message: 'Checkout successful', order });
+    } catch (error) {
+        console.error('❌ Checkout failed:', error);
+        res.status(400).json({ error: 'Checkout failed', message: error instanceof Error ? error.message : 'Unknown error' });
+    }
+});
+
+// GET /api/products/orders/me - Get my shop orders
+router.get('/orders/me', authenticate, async (req: Request, res: Response) => {
+    try {
+        const orders = await getUserOrders(req.user!.userId);
+        res.json({ orders });
+    } catch (error) {
+        console.error('❌ Failed to fetch user orders:', error);
+        res.status(500).json({ error: 'Failed to fetch orders' });
     }
 });
 

@@ -39,32 +39,18 @@ router.get('/weekly', authenticate, requireRole('ADMIN'), async (_req: Request, 
         const sevenDaysAgo = new Date();
         sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
-        // registrations
-        const regRecords = await db.select({ registeredAt: eventRegistrations.registeredAt })
-            .from(eventRegistrations)
-            .where(gte(eventRegistrations.registeredAt, sevenDaysAgo));
-        const regCount = regRecords.length;
+        // Raw aggregates
+        const [regResult] = await db.select({ value: count(eventRegistrations.id) }).from(eventRegistrations).where(gte(eventRegistrations.registeredAt, sevenDaysAgo));
+        const [matchResult] = await db.select({ value: count(matches.id) }).from(matches).where(gte(matches.matchDate, sevenDaysAgo));
+        const [eventResult] = await db.select({ value: count(events.id) }).from(events).where(and(eq(events.status, 'COMPLETED'), gte(events.endDate, sevenDaysAgo)));
+        const [earningResult] = await db.select({ value: sum(venueBookings.totalCost) }).from(venueBookings).where(and(eq(venueBookings.status, 'CONFIRMED'), gte(venueBookings.createdAt, sevenDaysAgo)));
+        
+        const regCount = regResult?.value || 0;
+        const matchCount = matchResult?.value || 0;
+        const eventHostedCount = eventResult?.value || 0;
+        const earningsSum = parseFloat(earningResult?.value || '0');
 
-        // matches
-        const matchRecords = await db.select({ matchDate: matches.matchDate, sport: events.sport })
-            .from(matches)
-            .innerJoin(events, eq(matches.eventId, events.id))
-            .where(gte(matches.matchDate, sevenDaysAgo));
-        const matchCount = matchRecords.length;
-
-        // events
-        const eventRecords = await db.select({ endDate: events.endDate, sport: events.sport })
-            .from(events)
-            .where(and(eq(events.status, 'COMPLETED'), gte(events.endDate, sevenDaysAgo)));
-        const eventHostedCount = eventRecords.length;
-
-        // earnings (simplified: from venue bookings in last 7 days)
-        const bookingRecords = await db.select({ totalCost: venueBookings.totalCost, createdAt: venueBookings.createdAt })
-            .from(venueBookings)
-            .where(and(eq(venueBookings.status, 'CONFIRMED'), gte(venueBookings.createdAt, sevenDaysAgo)));
-        const earningsSum = bookingRecords.reduce((sum, b) => sum + parseFloat(b.totalCost), 0);
-
-        // Build daily breakdown dynamically to ensure true values
+        // Build daily breakdown structure
         const dailyMap = new Map();
         for (let i = 0; i < 7; i++) {
             const date = new Date();
@@ -73,42 +59,58 @@ router.get('/weekly', authenticate, requireRole('ADMIN'), async (_req: Request, 
             dailyMap.set(dayName, { day: dayName, registrations: 0, matches: 0, earnings: 0 });
         }
 
-        // Map DB records to map
-        regRecords.forEach(r => {
-            const dayName = new Date(r.registeredAt).toLocaleDateString('en-US', { weekday: 'short' });
-            if (dailyMap.has(dayName)) dailyMap.get(dayName).registrations += 1;
-        });
-        matchRecords.forEach(m => {
-            const dayName = new Date(m.matchDate).toLocaleDateString('en-US', { weekday: 'short' });
-            if (dailyMap.has(dayName)) dailyMap.get(dayName).matches += 1;
-        });
-        bookingRecords.forEach(b => {
-            const dayName = new Date(b.createdAt).toLocaleDateString('en-US', { weekday: 'short' });
-            if (dailyMap.has(dayName)) dailyMap.get(dayName).earnings += parseFloat(b.totalCost);
-        });
+        // DB Driven Group By Queries
+        const regGroups = await db.select({
+            dayName: sql<string>`to_char(${eventRegistrations.registeredAt}, 'Dy')`,
+            count: count(eventRegistrations.id)
+        }).from(eventRegistrations).where(gte(eventRegistrations.registeredAt, sevenDaysAgo)).groupBy(sql`to_char(${eventRegistrations.registeredAt}, 'Dy')`);
+        
+        const matchGroups = await db.select({
+            dayName: sql<string>`to_char(${matches.matchDate}, 'Dy')`,
+            count: count(matches.id)
+        }).from(matches).where(gte(matches.matchDate, sevenDaysAgo)).groupBy(sql`to_char(${matches.matchDate}, 'Dy')`);
 
-        // Convert map to array ascending chronological
+        const earningGroups = await db.select({
+            dayName: sql<string>`to_char(${venueBookings.createdAt}, 'Dy')`,
+            total: sum(venueBookings.totalCost)
+        }).from(venueBookings).where(and(eq(venueBookings.status, 'CONFIRMED'), gte(venueBookings.createdAt, sevenDaysAgo))).groupBy(sql`to_char(${venueBookings.createdAt}, 'Dy')`);
+
+        regGroups.forEach(g => { if (dailyMap.has(g.dayName)) dailyMap.get(g.dayName).registrations = g.count; });
+        matchGroups.forEach(g => { if (dailyMap.has(g.dayName)) dailyMap.get(g.dayName).matches = g.count; });
+        earningGroups.forEach(g => { if (dailyMap.has(g.dayName)) dailyMap.get(g.dayName).earnings = parseFloat(g.total || '0'); });
+
         const dailyBreakdown = Array.from(dailyMap.values()).reverse();
 
-        // Calculate top sports correctly
+        // Top Sports via SQL Group By
+        const matchSports = await db.select({ sport: events.sport, count: count(matches.id) })
+            .from(matches)
+            .innerJoin(events, eq(matches.eventId, events.id))
+            .where(gte(matches.matchDate, sevenDaysAgo))
+            .groupBy(events.sport);
+
+        const eventSports = await db.select({ sport: events.sport, count: count(events.id) })
+            .from(events)
+            .where(and(eq(events.status, 'COMPLETED'), gte(events.endDate, sevenDaysAgo)))
+            .groupBy(events.sport);
+
         const sportCounts: Record<string, number> = {};
-        matchRecords.forEach(m => { sportCounts[m.sport] = (sportCounts[m.sport] || 0) + 1; });
-        eventRecords.forEach(e => { sportCounts[e.sport] = (sportCounts[e.sport] || 0) + 1; });
-        
+        matchSports.forEach(s => sportCounts[s.sport] = (sportCounts[s.sport] || 0) + Number(s.count));
+        eventSports.forEach(s => sportCounts[s.sport] = (sportCounts[s.sport] || 0) + Number(s.count));
+
         const totalSportEntries = Object.values(sportCounts).reduce((a, b) => a + b, 0);
         const topSports = Object.entries(sportCounts)
-            .map(([name, count]) => ({
+            .map(([name, val]) => ({
                 name,
-                count,
-                percentage: totalSportEntries > 0 ? Math.round((count / totalSportEntries) * 100) : 0
+                count: val,
+                percentage: totalSportEntries > 0 ? Math.round((val / totalSportEntries) * 100) : 0
             }))
             .sort((a, b) => b.count - a.count)
-            .slice(0, 5); // top 5
+            .slice(0, 5);
 
         res.json({
             period: 'Last 7 Days',
             registrations: regCount,
-            registrationsTrend: '+0%', // Trends are hardcoded until historical delta queries are requested
+            registrationsTrend: '+0%', 
             matchesCreated: matchCount,
             matchesTrend: '+0%',
             eventsHosted: eventHostedCount,
@@ -130,28 +132,25 @@ router.get('/monthly', authenticate, requireRole('ADMIN'), async (_req: Request,
         const thirtyDaysAgo = new Date();
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-        const regRecords = await db.select({ registeredAt: eventRegistrations.registeredAt })
-            .from(eventRegistrations)
-            .where(gte(eventRegistrations.registeredAt, thirtyDaysAgo));
-        const regCount = regRecords.length;
+        const [regResult] = await db.select({ value: count(eventRegistrations.id) }).from(eventRegistrations).where(gte(eventRegistrations.registeredAt, thirtyDaysAgo));
+        const [matchResult] = await db.select({ value: count(matches.id) }).from(matches).where(gte(matches.matchDate, thirtyDaysAgo));
+        const [eventResult] = await db.select({ value: count(events.id) }).from(events).where(and(eq(events.status, 'COMPLETED'), gte(events.endDate, thirtyDaysAgo)));
+        const [earningResult] = await db.select({ value: sum(venueBookings.totalCost) }).from(venueBookings).where(and(eq(venueBookings.status, 'CONFIRMED'), gte(venueBookings.createdAt, thirtyDaysAgo)));
 
-        const bookingRecords = await db.select({ totalCost: venueBookings.totalCost, createdAt: venueBookings.createdAt, venueId: venueBookings.venueId })
-            .from(venueBookings)
-            .where(and(eq(venueBookings.status, 'CONFIRMED'), gte(venueBookings.createdAt, thirtyDaysAgo)));
-        const earningsSum = bookingRecords.reduce((sum, b) => sum + parseFloat(b.totalCost), 0);
+        const regCount = regResult?.value || 0;
+        const matchCount = matchResult?.value || 0;
+        const eventHostedCount = eventResult?.value || 0;
+        const earningsSum = parseFloat(earningResult?.value || '0');
 
-        const matchRecords = await db.select({ matchDate: matches.matchDate, sport: events.sport })
-            .from(matches)
-            .innerJoin(events, eq(matches.eventId, events.id))
-            .where(gte(matches.matchDate, thirtyDaysAgo));
-        const matchCount = matchRecords.length;
+        // Instead of pure DB week interval partitioning (complex in postgres), we just pull id + date and group in memory ONLY to determine "Week 1", "Week 2"... 
+        // This is safe because pulling just id+date over 30 days is extremely lightweight compared to pulling all columns
+        // Actually, we can use DB `ceil((extract(epoch from now()) - extract(epoch from date)) / 86400 / 7)` 
+        // But doing it statically is fine for the 4-week structure requested.
+        
+        const regDates = await db.select({ date: eventRegistrations.registeredAt }).from(eventRegistrations).where(gte(eventRegistrations.registeredAt, thirtyDaysAgo));
+        const matchDates = await db.select({ date: matches.matchDate }).from(matches).where(gte(matches.matchDate, thirtyDaysAgo));
+        const bookingDates = await db.select({ date: venueBookings.createdAt, cost: venueBookings.totalCost }).from(venueBookings).where(and(eq(venueBookings.status, 'CONFIRMED'), gte(venueBookings.createdAt, thirtyDaysAgo)));
 
-        const eventRecords = await db.select({ endDate: events.endDate, sport: events.sport })
-            .from(events)
-            .where(and(eq(events.status, 'COMPLETED'), gte(events.endDate, thirtyDaysAgo)));
-        const eventHostedCount = eventRecords.length;
-
-        // Build 4 week breakdown statically
         const weeklyBreakdownArray = [
             { week: 'Week 1', registrations: 0, matches: 0, earnings: 0 },
             { week: 'Week 2', registrations: 0, matches: 0, earnings: 0 },
@@ -159,7 +158,6 @@ router.get('/monthly', authenticate, requireRole('ADMIN'), async (_req: Request,
             { week: 'Week 4', registrations: 0, matches: 0, earnings: 0 }
         ];
 
-        // Map DB records to weeks (0-7 days = week 4, 8-14 = week 3, etc. relative to today)
         const nowMs = Date.now();
         const getWeekIndex = (dateStamp: Date) => {
             const diffDays = Math.floor((nowMs - new Date(dateStamp).getTime()) / (1000 * 60 * 60 * 24));
@@ -169,41 +167,48 @@ router.get('/monthly', authenticate, requireRole('ADMIN'), async (_req: Request,
             return 0;
         };
 
-        regRecords.forEach(r => { weeklyBreakdownArray[getWeekIndex(r.registeredAt)].registrations += 1; });
-        matchRecords.forEach(m => { weeklyBreakdownArray[getWeekIndex(m.matchDate)].matches += 1; });
-        bookingRecords.forEach(b => { weeklyBreakdownArray[getWeekIndex(b.createdAt)].earnings += parseFloat(b.totalCost); });
+        regDates.forEach(r => { weeklyBreakdownArray[getWeekIndex(r.date)].registrations += 1; });
+        matchDates.forEach(m => { weeklyBreakdownArray[getWeekIndex(m.date)].matches += 1; });
+        bookingDates.forEach(b => { weeklyBreakdownArray[getWeekIndex(b.date)].earnings += parseFloat(b.cost); });
 
-        // Calculate top sports
-        const sportCounts: Record<string, number> = {};
-        matchRecords.forEach(m => { sportCounts[m.sport] = (sportCounts[m.sport] || 0) + 1; });
-        eventRecords.forEach(e => { sportCounts[e.sport] = (sportCounts[e.sport] || 0) + 1; });
-        
-        const totalSportEntries = Object.values(sportCounts).reduce((a, b) => a + b, 0);
-        const topSports = Object.entries(sportCounts)
-            .map(([name, count]) => ({
-                name,
-                count,
-                percentage: totalSportEntries > 0 ? Math.round((count / totalSportEntries) * 100) : 0
-            }))
-            .sort((a, b) => b.count - a.count)
-            .slice(0, 5);
+        // Calculate top venues via DB GroupBy
+        const venueGroups = await db.select({
+            venueId: venueBookings.venueId,
+            count: count(venueBookings.id)
+        }).from(venueBookings).where(and(eq(venueBookings.status, 'CONFIRMED'), gte(venueBookings.createdAt, thirtyDaysAgo))).groupBy(venueBookings.venueId);
 
-        // Calculate top venues
         const allVenues = await db.select({ id: venues.id, name: venues.name }).from(venues);
         const venueMap = new Map(allVenues.map(v => [v.id, v.name]));
-        
-        const venueBookingCounts: Record<string, number> = {};
-        bookingRecords.forEach(b => {
-             const vId = b.venueId as unknown as string; // UUID from json
-             venueBookingCounts[vId] = (venueBookingCounts[vId] || 0) + 1; 
-        });
 
-        const topVenues = Object.entries(venueBookingCounts)
-            .map(([vId, bookings]) => ({
-                name: venueMap.get(vId) || 'Unknown Venue',
-                bookings
+        const topVenues = venueGroups.map(v => ({
+            name: venueMap.get(v.venueId) || 'Unknown Venue',
+            bookings: Number(v.count)
+        })).sort((a, b) => b.bookings - a.bookings).slice(0, 5);
+
+        // Top Sports via SQL Group By
+        const matchSports = await db.select({ sport: events.sport, count: count(matches.id) })
+            .from(matches)
+            .innerJoin(events, eq(matches.eventId, events.id))
+            .where(gte(matches.matchDate, thirtyDaysAgo))
+            .groupBy(events.sport);
+
+        const eventSports = await db.select({ sport: events.sport, count: count(events.id) })
+            .from(events)
+            .where(and(eq(events.status, 'COMPLETED'), gte(events.endDate, thirtyDaysAgo)))
+            .groupBy(events.sport);
+
+        const sportCounts: Record<string, number> = {};
+        matchSports.forEach(s => sportCounts[s.sport] = (sportCounts[s.sport] || 0) + Number(s.count));
+        eventSports.forEach(s => sportCounts[s.sport] = (sportCounts[s.sport] || 0) + Number(s.count));
+
+        const totalSportEntries = Object.values(sportCounts).reduce((a, b) => a + b, 0);
+        const topSports = Object.entries(sportCounts)
+            .map(([name, val]) => ({
+                name,
+                count: val,
+                percentage: totalSportEntries > 0 ? Math.round((val / totalSportEntries) * 100) : 0
             }))
-            .sort((a, b) => b.bookings - a.bookings)
+            .sort((a, b) => b.count - a.count)
             .slice(0, 5);
 
         res.json({
@@ -232,37 +237,24 @@ router.get('/yearly', authenticate, requireRole('ADMIN'), async (_req: Request, 
         const oneYearAgo = new Date();
         oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
 
-        const regRecords = await db.select({ registeredAt: eventRegistrations.registeredAt })
-            .from(eventRegistrations)
-            .where(gte(eventRegistrations.registeredAt, oneYearAgo));
-        const regCount = regRecords.length;
+        const [regResult] = await db.select({ value: count(eventRegistrations.id) }).from(eventRegistrations).where(gte(eventRegistrations.registeredAt, oneYearAgo));
+        const [matchResult] = await db.select({ value: count(matches.id) }).from(matches).where(gte(matches.matchDate, oneYearAgo));
+        const [eventResult] = await db.select({ value: count(events.id) }).from(events).where(and(eq(events.status, 'COMPLETED'), gte(events.endDate, oneYearAgo)));
+        const [earningResult] = await db.select({ value: sum(venueBookings.totalCost) }).from(venueBookings).where(and(eq(venueBookings.status, 'CONFIRMED'), gte(venueBookings.createdAt, oneYearAgo)));
 
-        const bookingRecords = await db.select({ totalCost: venueBookings.totalCost, createdAt: venueBookings.createdAt })
-            .from(venueBookings)
-            .where(and(eq(venueBookings.status, 'CONFIRMED'), gte(venueBookings.createdAt, oneYearAgo)));
-        const earningsSum = bookingRecords.reduce((sum, b) => sum + parseFloat(b.totalCost), 0);
+        const regCount = regResult?.value || 0;
+        const matchCount = matchResult?.value || 0;
+        const eventHostedCount = eventResult?.value || 0;
+        const earningsSum = parseFloat(earningResult?.value || '0');
 
-        const matchRecords = await db.select({ matchDate: matches.matchDate, sport: events.sport })
-            .from(matches)
-            .innerJoin(events, eq(matches.eventId, events.id))
-            .where(gte(matches.matchDate, oneYearAgo));
-        const matchCount = matchRecords.length;
-
-        const eventRecords = await db.select({ endDate: events.endDate, sport: events.sport })
-            .from(events)
-            .where(and(eq(events.status, 'COMPLETED'), gte(events.endDate, oneYearAgo)));
-        const eventHostedCount = eventRecords.length;
+        const [totalUserResult] = await db.select({ value: count(users.id) }).from(users);
+        const totalUsersCount = totalUserResult?.value || 0;
         
-        // Calculate total users vs active
-        const allUsers = await db.select({ id: users.id }).from(users);
-        const totalUsersCount = allUsers.length;
-        
-        // Active users set
         const activeUserIds = new Set<string>();
-        const userRegs = await db.select({ userId: eventRegistrations.userId }).from(eventRegistrations).where(gte(eventRegistrations.registeredAt, oneYearAgo));
-        userRegs.forEach(r => activeUserIds.add(r.userId as unknown as string));
-        const userBookings = await db.select({ userId: venueBookings.userId }).from(venueBookings).where(gte(venueBookings.createdAt, oneYearAgo));
-        userBookings.forEach(b => activeUserIds.add(b.userId as unknown as string));
+        const userRegs = await db.select({ userId: eventRegistrations.userId }).from(eventRegistrations).where(gte(eventRegistrations.registeredAt, oneYearAgo)).groupBy(eventRegistrations.userId);
+        userRegs.forEach(r => activeUserIds.add(r.userId));
+        const userBookings = await db.select({ userId: venueBookings.userId }).from(venueBookings).where(gte(venueBookings.createdAt, oneYearAgo)).groupBy(venueBookings.userId);
+        userBookings.forEach(b => activeUserIds.add(b.userId));
         
         const activeUsersCount = activeUserIds.size;
         
@@ -272,14 +264,13 @@ router.get('/yearly', authenticate, requireRole('ADMIN'), async (_req: Request, 
             retentionRate: totalUsersCount > 0 ? Math.round((activeUsersCount / totalUsersCount) * 100) : 0
         };
 
-        // Initialize last 12 months array
         const monthlyBreakdownArray: {
-            month: string,
-            monthIndex: number,
-            year: number,
-            registrations: number,
-            matches: number,
-            earnings: number
+            month: string;
+            monthIndex: number;
+            year: number;
+            registrations: number;
+            matches: number;
+            earnings: number;
         }[] = [];
         const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
         
@@ -296,36 +287,60 @@ router.get('/yearly', authenticate, requireRole('ADMIN'), async (_req: Request, 
             });
         }
 
-        // Map data to months
-        regRecords.forEach(r => {
-            const d = new Date(r.registeredAt);
-            const mData = monthlyBreakdownArray.find(m => m.monthIndex === d.getMonth() && m.year === d.getFullYear());
-            if (mData) mData.registrations += 1;
-        });
+        const regGroups = await db.select({
+            mIndex: sql<number>`extract(month from ${eventRegistrations.registeredAt}) - 1`,
+            year: sql<number>`extract(year from ${eventRegistrations.registeredAt})`,
+            count: count(eventRegistrations.id)
+        }).from(eventRegistrations).where(gte(eventRegistrations.registeredAt, oneYearAgo)).groupBy(sql`extract(month from ${eventRegistrations.registeredAt})`, sql`extract(year from ${eventRegistrations.registeredAt})`);
         
-        matchRecords.forEach(m => {
-            const d = new Date(m.matchDate);
-            const mData = monthlyBreakdownArray.find(m => m.monthIndex === d.getMonth() && m.year === d.getFullYear());
-            if (mData) mData.matches += 1;
-        });
-        
-        bookingRecords.forEach(b => {
-             const d = new Date(b.createdAt);
-             const mData = monthlyBreakdownArray.find(m => m.monthIndex === d.getMonth() && m.year === d.getFullYear());
-             if (mData) mData.earnings += parseFloat(b.totalCost);
+        const matchGroups = await db.select({
+            mIndex: sql<number>`extract(month from ${matches.matchDate}) - 1`,
+            year: sql<number>`extract(year from ${matches.matchDate})`,
+            count: count(matches.id)
+        }).from(matches).where(gte(matches.matchDate, oneYearAgo)).groupBy(sql`extract(month from ${matches.matchDate})`, sql`extract(year from ${matches.matchDate})`);
+
+        const bookingGroups = await db.select({
+            mIndex: sql<number>`extract(month from ${venueBookings.createdAt}) - 1`,
+            year: sql<number>`extract(year from ${venueBookings.createdAt})`,
+            cost: sum(venueBookings.totalCost)
+        }).from(venueBookings).where(and(eq(venueBookings.status, 'CONFIRMED'), gte(venueBookings.createdAt, oneYearAgo))).groupBy(sql`extract(month from ${venueBookings.createdAt})`, sql`extract(year from ${venueBookings.createdAt})`);
+
+        regGroups.forEach(g => {
+            const mData = monthlyBreakdownArray.find(m => m.monthIndex === Number(g.mIndex) && m.year === Number(g.year));
+            if (mData) mData.registrations = Number(g.count);
         });
 
-        // Top sports
+        matchGroups.forEach(g => {
+            const mData = monthlyBreakdownArray.find(m => m.monthIndex === Number(g.mIndex) && m.year === Number(g.year));
+            if (mData) mData.matches = Number(g.count);
+        });
+
+        bookingGroups.forEach(g => {
+            const mData = monthlyBreakdownArray.find(m => m.monthIndex === Number(g.mIndex) && m.year === Number(g.year));
+            if (mData) mData.earnings = parseFloat(g.cost || '0');
+        });
+
+        const matchSports = await db.select({ sport: events.sport, count: count(matches.id) })
+            .from(matches)
+            .innerJoin(events, eq(matches.eventId, events.id))
+            .where(gte(matches.matchDate, oneYearAgo))
+            .groupBy(events.sport);
+
+        const eventSports = await db.select({ sport: events.sport, count: count(events.id) })
+            .from(events)
+            .where(and(eq(events.status, 'COMPLETED'), gte(events.endDate, oneYearAgo)))
+            .groupBy(events.sport);
+
         const sportCounts: Record<string, number> = {};
-        matchRecords.forEach(m => { sportCounts[m.sport] = (sportCounts[m.sport] || 0) + 1; });
-        eventRecords.forEach(e => { sportCounts[e.sport] = (sportCounts[e.sport] || 0) + 1; });
-        
+        matchSports.forEach(s => sportCounts[s.sport] = (sportCounts[s.sport] || 0) + Number(s.count));
+        eventSports.forEach(s => sportCounts[s.sport] = (sportCounts[s.sport] || 0) + Number(s.count));
+
         const totalSportEntries = Object.values(sportCounts).reduce((a, b) => a + b, 0);
         const topSports = Object.entries(sportCounts)
-            .map(([name, count]) => ({
+            .map(([name, val]) => ({
                 name,
-                count,
-                percentage: totalSportEntries > 0 ? Math.round((count / totalSportEntries) * 100) : 0
+                count: val,
+                percentage: totalSportEntries > 0 ? Math.round((val / totalSportEntries) * 100) : 0
             }))
             .sort((a, b) => b.count - a.count)
             .slice(0, 5);

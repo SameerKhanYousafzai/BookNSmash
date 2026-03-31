@@ -67,3 +67,28 @@ export const updateTeamSchema = z.object({
 export const addTeamMemberSchema = z.object({
     userId: z.string().min(1, 'User ID is required'),
 });
+
+// Venue Booking validators
+export const createVenueBookingSchema = z.object({
+    startTime: z.string().refine((date) => !isNaN(Date.parse(date)), 'Invalid start time'),
+    endTime: z.string().refine((date) => !isNaN(Date.parse(date)), 'Invalid end time'),
+});
+
+// Shop validators
+export const checkoutSchema = z.object({
+    items: z.array(z.object({
+        productId: z.string(),
+        quantity: z.number().int().min(1)
+    })).min(1, 'Cart cannot be empty')
+});
+
+// Password Reset validators
+export const forgotPasswordSchema = z.object({
+    email: z.string().email('Invalid email address')
+});
+
+export const resetPasswordSchema = z.object({
+    token: z.string().min(1, 'Reset token is required'),
+    newPassword: z.string().min(6, 'Password must be at least 6 characters')
+});
+

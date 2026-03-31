@@ -14,21 +14,47 @@ async function apiFetch(endpoint, options = {}, retries = 3) {
     const url = `${API_BASE}${endpoint}`;
     const config = {
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include', // Send cookies with every request
         ...options,
     };
 
-    // Add auth token if available
-    const token = localStorage.getItem('accessToken');
-    if (token) {
-        config.headers = {
-            ...config.headers,
-            Authorization: `Bearer ${token}`,
-        };
-    }
-
     for (let attempt = 1; attempt <= retries; attempt++) {
         try {
-            const response = await fetch(url, config);
+            let response = await fetch(url, config);
+
+            // Access token might be expired. Try to refresh if we get 401
+            // Do NOT trap 403 (Forbidden) in a refresh cycle, because 403 means valid token but invalid role.
+            if (response.status === 401 && !options._retry) {
+                try {
+                    console.log('🔄 Token expired or unauthorized. Attempting refresh via cookie...');
+                    const refreshRes = await fetch(`${API_BASE}/auth/refresh`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include'
+                    });
+
+                    if (refreshRes.ok) {
+                        console.log('✅ Token refreshed successfully');
+                        config._retry = true; // Prevent infinite loops
+                        
+                        // Retry the original request
+                        response = await fetch(url, config);
+                    } else {
+                        // If refresh token is also invalid, clear auth state
+                        localStorage.removeItem('isAuthenticated');
+                        localStorage.removeItem('userRole');
+                        localStorage.removeItem('currentUser');
+                        
+                        // Prevent infinite redirect loops if already on auth pages
+                        const path = window.location.pathname;
+                        if (path !== '/login' && path !== '/register' && path !== '/admin/login') {
+                            window.location.href = '/login';
+                        }
+                    }
+                } catch (refreshErr) {
+                    console.error('❌ Failed to refresh token:', refreshErr);
+                }
+            }
 
             // Guard: if the response is HTML instead of JSON, the backend is unreachable
             const contentType = response.headers.get('content-type') || '';

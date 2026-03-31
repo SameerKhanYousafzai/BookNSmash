@@ -1,6 +1,16 @@
-import { createContext, useContext, useReducer, useEffect, useState, useCallback } from 'react';
-import { sportsCategories } from '../data/mockData';
+import { createContext, useContext, useReducer, useEffect, useState, useCallback, useRef } from 'react';
 import api from '../services/api';
+
+const sportsCategories = [
+    { id: 1, name: 'Tennis', icon: '🎾', color: 'bg-yellow-500' },
+    { id: 2, name: 'Basketball', icon: '🏀', color: 'bg-orange-500' },
+    { id: 3, name: 'Football', icon: '⚽', color: 'bg-green-500' },
+    { id: 4, name: 'Badminton', icon: '🏸', color: 'bg-blue-500' },
+    { id: 5, name: 'Cricket', icon: '🏏', color: 'bg-red-500' },
+    { id: 6, name: 'Volleyball', icon: '🏐', color: 'bg-purple-500' },
+    { id: 7, name: 'Table Tennis', icon: '🏓', color: 'bg-pink-500' },
+    { id: 8, name: 'Swimming', icon: '🏊', color: 'bg-cyan-500' },
+];
 
 const DataContext = createContext(null);
 
@@ -122,6 +132,7 @@ const initialState = {
 export const DataProvider = ({ children }) => {
     const [state, dispatch] = useReducer(dataReducer, initialState);
     const [fetchedRef] = useState({ events: false, venues: false, players: false, teams: false, matches: false, products: false });
+    const hasFetched = useRef(false);
 
     // ─── Fetch events from backend API ────────────────────────────────────────
     const fetchEvents = useCallback(async (force = false) => {
@@ -287,6 +298,9 @@ export const DataProvider = ({ children }) => {
 
     // Fetch on mount
     useEffect(() => {
+        if (hasFetched.current) return;
+        hasFetched.current = true;
+        
         // First-time load
         fetchEvents();
         fetchVenues();
@@ -294,7 +308,7 @@ export const DataProvider = ({ children }) => {
         fetchTeams();
         fetchMatches();
         fetchProducts();
-    }, [fetchEvents, fetchVenues, fetchPlayers, fetchTeams, fetchMatches, fetchProducts]);
+    }, []);
 
     // ─── CRUD helpers (forward to API, then update local state) ───────────────
 

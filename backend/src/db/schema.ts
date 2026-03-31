@@ -51,6 +51,8 @@ export const users = pgTable(
         email: text('email').notNull(),
         passwordHash: text('password_hash').notNull(),
         role: userRoleEnum('role').default('USER').notNull(),
+        resetToken: text('reset_token'),
+        resetTokenExpiry: timestamp('reset_token_expiry', { withTimezone: true }),
         createdAt: timestamp('created_at', { withTimezone: true })
             .defaultNow()
             .notNull(),
@@ -125,7 +127,6 @@ export const teams = pgTable(
         captainId: uuid('captain_id')
             .references(() => users.id, { onDelete: 'cascade' })
             .notNull(),
-        memberIds: uuid('member_ids').array().notNull().default([]),
         wins: integer('wins').default(0).notNull(),
         losses: integer('losses').default(0).notNull(),
         description: text('description'),
@@ -139,6 +140,20 @@ export const teams = pgTable(
     (table) => [
         index('teams_captain_id_idx').on(table.captainId),
         uniqueIndex('teams_captain_sport_idx').on(table.captainId, table.sport),
+    ]
+);
+
+export const teamMembers = pgTable(
+    'team_members',
+    {
+        id: uuid('id').defaultRandom().primaryKey(),
+        teamId: uuid('team_id').references(() => teams.id, { onDelete: 'cascade' }).notNull(),
+        userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+        joinedAt: timestamp('joined_at', { withTimezone: true }).defaultNow().notNull(),
+    },
+    (table) => [
+        uniqueIndex('team_member_unique_idx').on(table.teamId, table.userId),
+        index('team_member_user_idx').on(table.userId),
     ]
 );
 
@@ -234,4 +249,31 @@ export const products = pgTable('products', {
     updatedAt: timestamp('updated_at', { withTimezone: true })
         .defaultNow()
         .notNull(),
+});
+
+// ─── Shop Orders ─────────────────────────────────────────────────────────────
+
+export const orderStatusEnum = pgEnum('order_status', [
+    'PENDING',
+    'PAID',
+    'SHIPPED',
+    'DELIVERED',
+    'CANCELLED'
+]);
+
+export const shopOrders = pgTable('shop_orders', {
+    id: uuid('id').defaultRandom().primaryKey(),
+    userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+    totalAmount: decimal('total_amount', { precision: 10, scale: 2 }).notNull(),
+    status: orderStatusEnum('status').default('PENDING').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const shopOrderItems = pgTable('shop_order_items', {
+    id: uuid('id').defaultRandom().primaryKey(),
+    orderId: uuid('order_id').references(() => shopOrders.id, { onDelete: 'cascade' }).notNull(),
+    productId: uuid('product_id').references(() => products.id, { onDelete: 'restrict' }).notNull(),
+    quantity: integer('quantity').notNull(),
+    priceAtPurchase: decimal('price_at_purchase', { precision: 10, scale: 2 }).notNull(),
 });

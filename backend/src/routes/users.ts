@@ -71,13 +71,18 @@ router.put('/me', authenticate, validate(updateUserSchema), async (req: Request,
     }
 });
 
-// GET /api/users - List all users (authenticated)
-router.get('/', authenticate, async (_req: Request, res: Response) => {
+// GET /api/users - List all users (admin only)
+router.get('/', authenticate, requireRole('ADMIN'), async (req: Request, res: Response) => {
     try {
-        const users = (await getAllUsers()).map(sanitizeUser);
+        const limit = parseInt(req.query.limit as string) || 50;
+        const offset = parseInt(req.query.offset as string) || 0;
+        
+        const users = (await getAllUsers(limit, offset)).map(sanitizeUser);
         res.json({
             users,
             total: users.length,
+            limit,
+            offset
         });
     } catch (error) {
         res.status(500).json({

@@ -2,7 +2,7 @@ import jwt from 'jsonwebtoken';
 import config from '../config/env';
 import { AuthTokenPayload, RefreshTokenPayload } from '../types';
 
-const ACCESS_TOKEN_EXPIRY = '15m';
+const ACCESS_TOKEN_EXPIRY = '1d';
 const REFRESH_TOKEN_EXPIRY = '7d';
 
 export const generateAccessToken = (userId: string, role: 'USER' | 'ADMIN', name: string): string => {

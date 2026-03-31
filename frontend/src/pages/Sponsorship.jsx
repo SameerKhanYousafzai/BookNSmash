@@ -1,7 +1,31 @@
 import { Check, Star, Award, Crown } from 'lucide-react';
 import Button from '../components/common/Button';
 import Card from '../components/common/Card';
-import { sponsorshipPackages } from '../data/mockData';
+
+const sponsorshipPackages = [
+    {
+        id: 1,
+        tier: 'Bronze',
+        price: 5000,
+        color: 'from-amber-700 to-amber-500',
+        benefits: ['Logo on event materials', 'Social media mentions', 'Website listing', 'Event tickets (5)'],
+    },
+    {
+        id: 2,
+        tier: 'Silver',
+        price: 10000,
+        color: 'from-gray-400 to-gray-300',
+        benefits: ['All Bronze benefits', 'Banner at venue', 'Email newsletter feature', 'Event tickets (10)', 'Booth space at events'],
+        popular: true,
+    },
+    {
+        id: 3,
+        tier: 'Gold',
+        price: 25000,
+        color: 'from-yellow-500 to-yellow-300',
+        benefits: ['All Silver benefits', 'Title sponsor recognition', 'Speaking opportunity', 'Event tickets (25)', 'Premium booth location', 'Exclusive networking events'],
+    },
+];
 
 export default function Sponsorship() {
     const handleContact = (tier) => {

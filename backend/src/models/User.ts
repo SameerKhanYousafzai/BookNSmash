@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { eq, and, gt } from 'drizzle-orm';
 import { db, users } from '../db';
 import { hashPassword } from '../services/password';
 
@@ -69,8 +69,36 @@ export const updateUser = async (
     return updated ?? null;
 };
 
-export const getAllUsers = async (): Promise<User[]> => {
-    return db.select().from(users);
+export const setResetToken = async (id: string, token: string, expiry: Date): Promise<void> => {
+    await db.update(users).set({
+        resetToken: token,
+        resetTokenExpiry: expiry,
+        updatedAt: new Date()
+    }).where(eq(users.id, id));
+};
+
+export const findUserByResetToken = async (token: string): Promise<User | undefined> => {
+    const [user] = await db.select().from(users).where(
+        and(
+            eq(users.resetToken, token),
+            gt(users.resetTokenExpiry, new Date())
+        )
+    ).limit(1);
+    return user;
+};
+
+export const updatePassword = async (id: string, newPasswordRaw: string): Promise<void> => {
+    const passwordHash = await hashPassword(newPasswordRaw);
+    await db.update(users).set({
+        passwordHash,
+        resetToken: null,
+        resetTokenExpiry: null,
+        updatedAt: new Date()
+    }).where(eq(users.id, id));
+};
+
+export const getAllUsers = async (limit: number = 100, offset: number = 0): Promise<User[]> => {
+    return db.select().from(users).limit(limit).offset(offset);
 };
 
 export const deleteUser = async (id: string): Promise<boolean> => {

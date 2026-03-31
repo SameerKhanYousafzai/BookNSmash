@@ -21,20 +21,19 @@ const router = Router();
 // GET /api/events - List all events (public)
 router.get('/', async (req: Request, res: Response) => {
     try {
-        const { sport, status } = req.query;
+        const { sport, status, limit, offset } = req.query;
 
         const currentEvents = await getAllEvents({
             sport: sport as string,
             status: status as string,
+            limit: limit ? parseInt(limit as string, 10) : 50,
+            offset: offset ? parseInt(offset as string, 10) : 0,
         });
 
-        console.log(`📅 [GET /api/events] Found ${currentEvents.length} events in database`);
+        console.log(`📅 [GET /api/events] Found ${currentEvents.events.length} events in database`);
 
         res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-        res.json({
-            events: currentEvents,
-            total: currentEvents.length,
-        });
+        res.json(currentEvents);
     } catch (error) {
         console.error('❌ Failed to fetch events:', error);
         res.status(500).json({
