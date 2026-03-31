@@ -2,6 +2,7 @@ import express, { Application, Request, Response } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
+import cookieParser from 'cookie-parser';
 import config from './config/env';
 import { errorHandler } from './middleware/errorHandler';
 import { testConnection } from './db';
@@ -19,6 +20,9 @@ import matchRoutes from './routes/matches';
 import adminRoutes from './routes/admin';
 
 const app: Application = express();
+
+// Trust reverse proxies (Railway/Heroku/Vercel) to properly extract client IPs for rate-limiting
+app.set('trust proxy', 1);
 
 // Security middleware
 app.use(helmet());
@@ -53,15 +57,17 @@ app.use(
 // Rate limiting
 const limiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100,
+    max: process.env.NODE_ENV === 'production' ? 100 : 1000,
+    skip: (req) => req.ip === '127.0.0.1' || req.ip === '::1',
     message: 'Too many requests from this IP, please try again later',
 });
 
 app.use('/api/', limiter);
 
-// Body parser
+// Body parser and cookies
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
 
 // Health check endpoint — used by frontend to verify backend is alive
 app.get('/health', (_req: Request, res: Response) => {
@@ -164,7 +170,8 @@ const startServer = async () => {
         await ensureAdminUser();
 
         // Step 4: Bind to the resolved port
-        server = app.listen(resolvedPort, '0.0.0.0', () => {
+        const host = config.nodeEnv === 'production' ? '0.0.0.0' : 'localhost';
+        server = app.listen(resolvedPort, host, () => {
             // Write the port file for Vite proxy
             writePortFile(resolvedPort);
 
@@ -199,5 +206,11 @@ const startServer = async () => {
         process.exit(1);
     }
 };
+
+// Global unhandled promise rejection handler
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('❌ UNHANDLED REJECTION:', reason);
+    console.error('Promise:', promise);
+});
 
 startServer();
