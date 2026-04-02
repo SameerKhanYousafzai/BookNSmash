@@ -29,25 +29,26 @@ app.set('trust proxy', 1);
 // Security middleware
 app.use(helmet());
 
-// CORS configuration — allow Vite dev server + production origins + dynamic port
+// CORS configuration — hardcoded allowed origins for reliability across deployments
+const allowedOrigins = [
+    'http://localhost:5173',
+    'https://book-n-smash.vercel.app',
+    'https://booknsmash.antigravity.in',
+    'https://booknsmash-backend.pxxl.click',
+];
+
 app.use(
     cors({
         origin: (origin, callback) => {
             // Allow requests with no origin (e.g. curl, Postman, server-to-server)
             if (!origin) return callback(null, true);
 
-            // Build allowed list: localhost dev + all CORS_ORIGIN values (comma-separated)
-            const allowed = [
-                'http://localhost:5173',
-                ...config.corsOrigin.split(',').map(o => o.trim()).filter(Boolean),
-            ];
-
             // Also allow any localhost port (for dynamic port resolution)
             if (origin.match(/^http:\/\/localhost:\d+$/)) {
                 return callback(null, true);
             }
 
-            if (allowed.includes(origin)) {
+            if (allowedOrigins.includes(origin)) {
                 return callback(null, true);
             }
 
