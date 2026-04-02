@@ -30,12 +30,16 @@ export const AuthProvider = ({ children }) => {
     }, []);
 
     /**
-     * Helper: persist auth state to localStorage (UI cache only, secure auth is in HTTP-only cookies)
+     * Helper: persist auth state to localStorage
+     * Stores accessToken so the api service can attach Bearer headers on cross-origin requests.
      */
-    const persistAuth = (user, role) => {
+    const persistAuth = (user, role, accessToken) => {
         localStorage.setItem('isAuthenticated', 'true');
         localStorage.setItem('userRole', role);
         localStorage.setItem('currentUser', JSON.stringify(user));
+        if (accessToken) {
+            localStorage.setItem('accessToken', accessToken);
+        }
     };
 
     /**
@@ -54,7 +58,7 @@ export const AuthProvider = ({ children }) => {
             setIsAuthenticated(true);
             setUserRole(data.user.role || 'USER');
             setCurrentUser(data.user);
-            persistAuth(data.user, data.user.role || 'USER');
+            persistAuth(data.user, data.user.role || 'USER', data.accessToken);
 
             navigate('/');
             return { success: true };
@@ -82,7 +86,7 @@ export const AuthProvider = ({ children }) => {
             setIsAuthenticated(true);
             setUserRole('USER');
             setCurrentUser(data.user);
-            persistAuth(data.user, 'USER');
+            persistAuth(data.user, 'USER', data.accessToken);
 
             navigate('/');
             return { success: true };
@@ -110,7 +114,7 @@ export const AuthProvider = ({ children }) => {
             setIsAuthenticated(true);
             setUserRole('ADMIN');
             setCurrentUser(data.user);
-            persistAuth(data.user, 'ADMIN');
+            persistAuth(data.user, 'ADMIN', data.accessToken);
 
             navigate('/admin/dashboard/weekly');
             return { success: true };
@@ -138,6 +142,7 @@ export const AuthProvider = ({ children }) => {
         localStorage.removeItem('isAuthenticated');
         localStorage.removeItem('userRole');
         localStorage.removeItem('currentUser');
+        localStorage.removeItem('accessToken');
 
         navigate('/login');
     };

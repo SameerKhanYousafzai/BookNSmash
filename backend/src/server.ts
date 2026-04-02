@@ -8,6 +8,8 @@ import { errorHandler } from './middleware/errorHandler';
 import { testConnection } from './db';
 import { ensureAdminUser } from './models/User';
 import { findAvailablePort, writePortFile, cleanPortFile } from './utils/port';
+import { initializeStorage, LOCAL_UPLOADS_DIR } from './utils/storage';
+import path from 'path';
 
 // Import routes
 import authRoutes from './routes/auth';
@@ -34,10 +36,11 @@ app.use(
             // Allow requests with no origin (e.g. curl, Postman, server-to-server)
             if (!origin) return callback(null, true);
 
+            // Build allowed list: localhost dev + all CORS_ORIGIN values (comma-separated)
             const allowed = [
                 'http://localhost:5173',
-                config.corsOrigin,
-            ].filter(Boolean);
+                ...config.corsOrigin.split(',').map(o => o.trim()).filter(Boolean),
+            ];
 
             // Also allow any localhost port (for dynamic port resolution)
             if (origin.match(/^http:\/\/localhost:\d+$/)) {
@@ -68,6 +71,10 @@ app.use('/api/', limiter);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
+
+// Serve locally uploaded event images as static files
+// (used when Supabase Storage is not configured — see utils/storage.ts)
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
 // Health check endpoint — used by frontend to verify backend is alive
 app.get('/health', (_req: Request, res: Response) => {
@@ -168,6 +175,10 @@ const startServer = async () => {
         // Step 3: Seed admin user
         console.log('👤 Ensuring admin user exists...');
         await ensureAdminUser();
+
+        // Step 3.5: Initialize Supabase storage
+        console.log('🪣 Initializing Supabase storage...');
+        await initializeStorage();
 
         // Step 4: Bind to the resolved port
         const host = config.nodeEnv === 'production' ? '0.0.0.0' : 'localhost';
