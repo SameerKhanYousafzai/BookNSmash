@@ -20,6 +20,7 @@ export default function VenueManager() {
     const [editingVenue, setEditingVenue] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [statusMessage, setStatusMessage] = useState(null);
+    const [globalStatus, setGlobalStatus] = useState(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     const AVAILABLE_SPORTS = [
@@ -162,8 +163,11 @@ export default function VenueManager() {
         if (window.confirm('Are you sure you want to delete this venue? All associated events and bookings may be affected.')) {
             try {
                 await deleteVenue(id);
+                setGlobalStatus({ type: 'success', text: 'Venue deleted successfully!' });
+                setTimeout(() => setGlobalStatus(null), 3000);
             } catch (error) {
-                alert('Failed to delete venue: ' + error.message);
+                setGlobalStatus({ type: 'error', text: 'Failed to delete venue: ' + error.message });
+                setTimeout(() => setGlobalStatus(null), 5000);
             }
         }
     };
@@ -192,6 +196,14 @@ export default function VenueManager() {
                     Add Facility
                 </Button>
             </div>
+
+            {/* Global Status Message */}
+            {globalStatus && (
+                <div className={`p-4 rounded-lg flex items-center gap-3 ${globalStatus.type === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
+                    {globalStatus.type === 'success' ? <CheckCircle className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}
+                    <p className="text-sm font-medium">{globalStatus.text}</p>
+                </div>
+            )}
 
             {/* Search */}
             <Card className="p-4">

@@ -114,20 +114,7 @@ export default function TeamProfile() {
                 {/* Team Card */}
                 <div className="lg:col-span-1">
                     <Card className="p-6 text-center sticky top-24">
-                        <div className="relative inline-block mb-4">
-                            <img
-                                src={formData.logo}
-                                alt={formData.name || 'Team'}
-                                className="w-32 h-32 rounded-lg mx-auto object-cover ring-4 ring-primary-100"
-                            />
-                            {!isViewMode && (
-                                <button
-                                    className="absolute bottom-0 right-0 w-10 h-10 bg-primary-600 text-white rounded-full flex items-center justify-center hover:bg-primary-700 transition-colors shadow-lg"
-                                >
-                                    <Upload className="w-5 h-5" />
-                                </button>
-                            )}
-                        </div>
+
 
                         {isViewMode && (
                             <>

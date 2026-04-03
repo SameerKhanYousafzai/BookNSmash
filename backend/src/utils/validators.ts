@@ -29,9 +29,10 @@ export const createEventSchema = z.object({
     sport: z.string().min(1, 'Sport is required'),
     startDate: z.string().refine((date) => !isNaN(Date.parse(date)), 'Invalid start date'),
     endDate: z.string().refine((date) => !isNaN(Date.parse(date)), 'Invalid end date'),
-    entryFee: z.number().min(0, 'Entry fee must be non-negative'),
-    maxParticipants: z.number().min(1, 'Must allow at least 1 participant'),
+    entryFee: z.coerce.number().min(0, 'Entry fee must be non-negative'),
+    maxParticipants: z.coerce.number().min(1, 'Must allow at least 1 participant'),
     venueId: z.string().min(1, 'Venue ID is required'),
+    imageUrl: z.string().url().optional().nullable(),
 });
 
 export const updateEventSchema = createEventSchema.partial();

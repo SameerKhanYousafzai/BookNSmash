@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Plus, Edit2, Trash2, Search, Calendar, MapPin, Clock, Info, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
+import { Plus, Edit2, Trash2, Search, Calendar, MapPin, Clock, Info, CheckCircle, AlertCircle, Loader2, Image as ImageIcon, X } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import Card from '../../components/common/Card';
 import Button from '../../components/common/Button';
@@ -66,6 +66,7 @@ export default function EventManager() {
             description: '',
             entryFee: 0,
             status: 'UPCOMING',
+            image_url: '',
         });
         setIsFormOpen(true);
         setStatusMessage(null);
@@ -85,6 +86,7 @@ export default function EventManager() {
             description: event.description || '',
             entryFee: parseFloat(event.entryFee) || 0,
             status: event.status,
+            image_url: event.imageUrl || '',
         });
         setIsFormOpen(true);
         setStatusMessage(null);
@@ -124,6 +126,7 @@ export default function EventManager() {
                 maxParticipants: parseInt(formData.maxParticipants) || 1,
                 entryFee: parseFloat(formData.entryFee) || 0,
                 status: formData.status || 'UPCOMING',
+                image_url: (formData.image_url || '').trim()
             };
 
             const token = localStorage.getItem('accessToken');
@@ -133,12 +136,16 @@ export default function EventManager() {
             console.log('🌏 [EventManager] Dispatching API request...', payload);
 
             if (editingEvent) {
-                await updateEvent(editingEvent.id, payload);
-                setStatusMessage({ type: 'success', text: 'Success! Event updated.' });
-            } else {
-                await addEvent(payload);
-                setStatusMessage({ type: 'success', text: 'Success! Event created.' });
-            }
+                    await updateEvent(editingEvent.id, payload);
+                    setStatusMessage({ type: 'success', text: 'Event updated successfully.' });
+                } else {
+                    const result = await addEvent(payload);
+                    if (result?.warning) {
+                        setStatusMessage({ type: 'warning', text: `Event created! Note: ${result.warning}` });
+                    } else {
+                        setStatusMessage({ type: 'success', text: 'Event created successfully.' });
+                    }
+                }
 
             console.log('✅ [EventManager] Persistence successful');
 
@@ -211,8 +218,18 @@ export default function EventManager() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredEvents.length > 0 ? (
                     filteredEvents.map((event) => (
-                        <Card key={event.id} className="group overflow-hidden">
-                            <div className="p-6">
+                        <Card key={event.id} className="group overflow-hidden flex flex-col">
+                            {event.imageUrl ? (
+                                <div className="h-48 w-full overflow-hidden bg-gray-100 shrink-0">
+                                    <img src={event.imageUrl} alt={event.title} className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500" />
+                                </div>
+                            ) : (
+                                <div className="h-48 w-full bg-gray-100 flex flex-col items-center justify-center shrink-0 border-b border-gray-100">
+                                    <ImageIcon className="w-12 h-12 text-gray-300 mb-2" />
+                                    <span className="text-xs text-gray-400 font-medium tracking-wide">NO COVER IMAGE</span>
+                                </div>
+                            )}
+                            <div className="p-6 flex-1 flex flex-col">
                                 <div className="flex items-start justify-between mb-4">
                                     <div className="flex-1">
                                         <div className="flex items-center gap-2 mb-1">
@@ -303,8 +320,11 @@ export default function EventManager() {
                         </div>
 
                         {statusMessage && (
-                            <div className={`mb-6 p-4 rounded-lg flex items-center gap-3 animate-in slide-in-from-top duration-300 ${statusMessage.type === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'
-                                }`}>
+                            <div className={`mb-6 p-4 rounded-lg flex items-center gap-3 animate-in slide-in-from-top duration-300 ${
+                                statusMessage.type === 'success' ? 'bg-green-50 text-green-700 border border-green-200' :
+                                statusMessage.type === 'warning' ? 'bg-amber-50 text-amber-700 border border-amber-200' :
+                                'bg-red-50 text-red-700 border border-red-200'
+                            }`}>
                                 {statusMessage.type === 'success' ? <CheckCircle className="w-5 h-5 flex-shrink-0" /> : <AlertCircle className="w-5 h-5 flex-shrink-0" />}
                                 <p className="text-sm font-medium">{statusMessage.text}</p>
                             </div>
@@ -457,6 +477,26 @@ export default function EventManager() {
                                     className="input-field-new resize-none"
                                     placeholder="Enter event details, registration requirements, or tournament rules..."
                                 />
+                            </div>
+
+                            {/* Image URL Area */}
+                            <div>
+                                <label className="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-tight">
+                                    Image URL (Optional)
+                                </label>
+                                <input
+                                    type="url"
+                                    name="image_url"
+                                    value={formData.image_url || ''}
+                                    onChange={handleChange}
+                                    className="input-field-new"
+                                    placeholder="https://images.unsplash.com/... or cloud storage link"
+                                />
+                                {formData.image_url && (
+                                    <div className="mt-4 rounded-lg overflow-hidden border border-gray-200">
+                                        <img src={formData.image_url} alt="Preview" className="w-full h-48 object-cover" onError={(e) => {e.target.style.display = 'none'}} />
+                                    </div>
+                                )}
                             </div>
 
                             <div className="flex flex-col sm:flex-row gap-4 pt-6 border-t border-gray-100">

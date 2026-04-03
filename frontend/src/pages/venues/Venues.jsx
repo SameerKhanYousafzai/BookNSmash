@@ -107,7 +107,7 @@ export default function Venues() {
                         <Card className="group cursor-pointer h-full hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2">
                             <div className="relative h-56 rounded-t-xl overflow-hidden">
                                 <img
-                                    src={venue.image}
+                                    src={venue.images && venue.images.length > 0 ? venue.images[0] : 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=1470&auto=format&fit=crop'}
                                     alt={venue.name}
                                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                                 />

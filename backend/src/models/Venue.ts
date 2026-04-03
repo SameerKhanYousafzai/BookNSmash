@@ -1,5 +1,5 @@
 import { eq, ilike, and } from 'drizzle-orm';
-import { db, venues } from '../db';
+import { db, venues, venueBookings, events } from '../db';
 
 // Types derived from Drizzle schema
 type Venue = typeof venues.$inferSelect;
@@ -82,6 +82,10 @@ export const updateVenue = async (
 };
 
 export const deleteVenue = async (id: string): Promise<boolean> => {
+    // Cascade delete related records first due to restrict constraints
+    await db.delete(venueBookings).where(eq(venueBookings.venueId, id));
+    await db.delete(events).where(eq(events.venueId, id));
+    
     const result = await db.delete(venues).where(eq(venues.id, id)).returning();
     return result.length > 0;
 };

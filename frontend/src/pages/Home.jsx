@@ -129,7 +129,7 @@ export default function Home() {
                                 {/* Image Section */}
                                 <div className="relative h-48 overflow-hidden">
                                     <img
-                                        src={event.image}
+                                        src={event.imageUrl || event.image_url || 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=1470&auto=format&fit=crop'}
                                         alt={event.title}
                                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                                     />

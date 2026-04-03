@@ -40,10 +40,12 @@ export default function VenueDetail() {
     }
 
     const nextImage = () => {
+        if (!venue.images || venue.images.length === 0) return;
         setCurrentImageIndex((prev) => (prev + 1) % venue.images.length);
     };
 
     const prevImage = () => {
+        if (!venue.images || venue.images.length === 0) return;
         setCurrentImageIndex((prev) => (prev - 1 + venue.images.length) % venue.images.length);
     };
 
@@ -88,13 +90,13 @@ export default function VenueDetail() {
             <div className="container-custom py-8">
                 <div className="relative h-96 sm:h-[500px] rounded-2xl overflow-hidden bg-gray-900">
                     <img
-                        src={venue.images[currentImageIndex]}
+                        src={(venue.images && venue.images.length > 0) ? venue.images[currentImageIndex] : 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=1470&auto=format&fit=crop'}
                         alt={`${venue.name} - Image ${currentImageIndex + 1}`}
                         className="w-full h-full object-cover"
                     />
 
                     {/* Navigation Buttons */}
-                    {venue.images.length > 1 && (
+                    {venue.images && venue.images.length > 1 && (
                         <>
                             <button
                                 onClick={prevImage}
@@ -112,39 +114,43 @@ export default function VenueDetail() {
                     )}
 
                     {/* Image Indicators */}
-                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
-                        {venue.images.map((_, idx) => (
-                            <button
-                                key={idx}
-                                onClick={() => setCurrentImageIndex(idx)}
-                                className={`w-2 h-2 rounded-full transition-all ${idx === currentImageIndex
-                                    ? 'bg-white w-8'
-                                    : 'bg-white/50 hover:bg-white/75'
-                                    }`}
-                            />
-                        ))}
-                    </div>
+                    {venue.images && venue.images.length > 1 && (
+                        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
+                            {venue.images.map((_, idx) => (
+                                <button
+                                    key={idx}
+                                    onClick={() => setCurrentImageIndex(idx)}
+                                    className={`w-2 h-2 rounded-full transition-all ${idx === currentImageIndex
+                                        ? 'bg-white w-8'
+                                        : 'bg-white/50 hover:bg-white/75'
+                                        }`}
+                                />
+                            ))}
+                        </div>
+                    )}
                 </div>
 
                 {/* Thumbnail Gallery */}
-                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-4 mt-4">
-                    {venue.images.map((image, idx) => (
-                        <button
-                            key={idx}
-                            onClick={() => setCurrentImageIndex(idx)}
-                            className={`relative h-24 rounded-lg overflow-hidden ${idx === currentImageIndex
-                                ? 'ring-4 ring-primary-500'
-                                : 'opacity-60 hover:opacity-100'
-                                } transition-all`}
-                        >
-                            <img
-                                src={image}
-                                alt={`Thumbnail ${idx + 1}`}
-                                className="w-full h-full object-cover"
-                            />
-                        </button>
-                    ))}
-                </div>
+                {venue.images && venue.images.length > 1 && (
+                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-4 mt-4">
+                        {venue.images.map((image, idx) => (
+                            <button
+                                key={idx}
+                                onClick={() => setCurrentImageIndex(idx)}
+                                className={`relative h-24 rounded-lg overflow-hidden ${idx === currentImageIndex
+                                    ? 'ring-4 ring-primary-500'
+                                    : 'opacity-60 hover:opacity-100'
+                                    } transition-all`}
+                            >
+                                <img
+                                    src={image}
+                                    alt={`Thumbnail ${idx + 1}`}
+                                    className="w-full h-full object-cover"
+                                />
+                            </button>
+                        ))}
+                    </div>
+                )}
             </div>
 
             {/* Content */}

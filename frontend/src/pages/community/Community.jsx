@@ -227,11 +227,6 @@ export default function Community() {
                                 <Card className="group cursor-pointer hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
                                     <div className="p-6">
                                         <div className="flex items-start gap-4 mb-4">
-                                            <img
-                                                src={team.logo || `https://via.placeholder.com/150?text=${team.name?.charAt(0)}`}
-                                                alt={team.name}
-                                                className="w-16 h-16 rounded-lg object-cover ring-2 ring-gray-200 group-hover:ring-primary-300 transition-all"
-                                            />
                                             <div className="flex-1">
                                                 <h3 className="font-bold text-lg text-gray-900 mb-1 group-hover:text-primary-600 transition-colors">
                                                     {team.name}

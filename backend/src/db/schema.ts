@@ -103,6 +103,7 @@ export const events = pgTable(
             .default('0')
             .notNull(),
         status: eventStatusEnum('status').default('UPCOMING').notNull(),
+        imageUrl: text('image_url'),
         createdAt: timestamp('created_at', { withTimezone: true })
             .defaultNow()
             .notNull(),

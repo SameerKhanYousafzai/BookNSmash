@@ -13,8 +13,8 @@ if (!connectionString) {
 const sql = postgres(connectionString);
 
 async function main() {
-    console.log('🔄 Running 0001 migration manually...');
-    const file = fs.readFileSync(path.join(process.cwd(), 'drizzle/0001_gifted_silver_samurai.sql'), 'utf8');
+    console.log('🔄 Running 0002 migration manually...');
+    const file = fs.readFileSync(path.join(process.cwd(), 'drizzle/0002_clear_inhumans.sql'), 'utf8');
     
     // We must execute statement by statement or as one chunk if Supabase allows
     // Let's strip the statement-breakpoint

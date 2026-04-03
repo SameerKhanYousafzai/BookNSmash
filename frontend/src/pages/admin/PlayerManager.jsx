@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { Plus, Edit2, Trash2, Search, User, Loader2, AlertCircle } from 'lucide-react';
+import { Plus, Edit2, Trash2, Search, User, Loader2, AlertCircle, CheckCircle } from 'lucide-react';
 import { useData } from '../../context/DataContext';
+import { useAuth } from '../../context/AuthContext';
 import Card from '../../components/common/Card';
 import Button from '../../components/common/Button';
 
@@ -12,7 +13,9 @@ import Button from '../../components/common/Button';
 export default function PlayerManager() {
     // players state is initialized in DataContext as []
     const { players = [], addPlayer, updatePlayer, deletePlayer, loading = {}, error: dataError } = useData();
+    const { currentUser } = useAuth();
     const [isFormOpen, setIsFormOpen] = useState(false);
+    const [globalStatus, setGlobalStatus] = useState(null);
     const [editingPlayer, setEditingPlayer] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [formData, setFormData] = useState({
@@ -134,9 +137,12 @@ export default function PlayerManager() {
             try {
                 if (deletePlayer) {
                     await deletePlayer(id);
+                    setGlobalStatus({ type: 'success', text: 'Player deleted successfully!' });
+                    setTimeout(() => setGlobalStatus(null), 3000);
                 }
             } catch (error) {
-                alert('Failed to delete player: ' + error.message);
+                setGlobalStatus({ type: 'error', text: 'Failed to delete player: ' + error.message });
+                setTimeout(() => setGlobalStatus(null), 5000);
             }
         }
     };
@@ -156,6 +162,14 @@ export default function PlayerManager() {
                     Add Player
                 </Button>
             </div>
+
+            {/* Global Status Message */}
+            {globalStatus && (
+                <div className={`p-4 rounded-lg flex items-center gap-3 ${globalStatus.type === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
+                    {globalStatus.type === 'success' ? <CheckCircle className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}
+                    <p className="text-sm font-medium">{globalStatus.text}</p>
+                </div>
+            )}
 
             {/* Search */}
             <Card className="p-4">
@@ -192,15 +206,19 @@ export default function PlayerManager() {
                                     <button
                                         onClick={() => handleEdit(player)}
                                         className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                        title="Edit Player"
                                     >
                                         <Edit2 className="w-4 h-4" />
                                     </button>
-                                    <button
-                                        onClick={() => handleDelete(player.id)}
-                                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                    >
-                                        <Trash2 className="w-4 h-4" />
-                                    </button>
+                                    {player.id !== currentUser?.id && (
+                                        <button
+                                            onClick={() => handleDelete(player.id)}
+                                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                            title="Delete Player"
+                                        >
+                                            <Trash2 className="w-4 h-4" />
+                                        </button>
+                                    )}
                                 </div>
                             </div>
 

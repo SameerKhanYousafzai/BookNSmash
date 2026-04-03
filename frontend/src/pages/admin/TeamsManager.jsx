@@ -141,11 +141,6 @@ export default function TeamsManager() {
                     <Card key={team.id} className="p-6">
                         <div className="flex items-start justify-between mb-4">
                             <div className="flex items-center gap-3">
-                                <img
-                                    src={team.logo}
-                                    alt={team.name}
-                                    className="w-12 h-12 rounded-lg object-cover"
-                                />
                                 <div>
                                     <h3 className="font-bold text-gray-900">{team.name}</h3>
                                     <p className="text-sm text-gray-600">{team.sport}</p>

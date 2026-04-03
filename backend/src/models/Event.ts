@@ -28,6 +28,7 @@ export const createEvent = async (data: {
     maxParticipants: number;
     entryFee?: number;
     status?: 'UPCOMING' | 'ONGOING' | 'COMPLETED' | 'CANCELLED';
+    imageUrl?: string | null;
 }): Promise<Event> => {
     const [event] = await db
         .insert(events)
@@ -41,6 +42,7 @@ export const createEvent = async (data: {
             maxParticipants: data.maxParticipants,
             entryFee: String(data.entryFee ?? 0),
             status: data.status ?? 'UPCOMING',
+            imageUrl: data.imageUrl ?? null,
         })
         .returning();
 

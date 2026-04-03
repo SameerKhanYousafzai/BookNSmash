@@ -1,5 +1,5 @@
-import { eq, and, gt } from 'drizzle-orm';
-import { db, users } from '../db';
+import { eq, and, gt, count, or } from 'drizzle-orm';
+import { db, users, teams, matches } from '../db';
 import { hashPassword } from '../services/password';
 
 // Type derived from Drizzle schema
@@ -102,6 +102,27 @@ export const getAllUsers = async (limit: number = 100, offset: number = 0): Prom
 };
 
 export const deleteUser = async (id: string): Promise<boolean> => {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    if (!user) return false;
+
+    if (user.role === 'ADMIN') {
+        const [adminCount] = await db.select({ value: count(users.id) }).from(users).where(eq(users.role, 'ADMIN'));
+        if (Number(adminCount.value) <= 1) {
+            throw new Error('Cannot delete the last admin user');
+        }
+    }
+
+    // Find all teams where user is captain
+    const userTeams = await db.select({ id: teams.id }).from(teams).where(eq(teams.captainId, id));
+    
+    // For each team, delete any matches since matches to team constraint is 'restrict'
+    for (const team of userTeams) {
+        await db.delete(matches).where(
+            or(eq(matches.team1Id, team.id), eq(matches.team2Id, team.id))
+        );
+    }
+
+    // Now delete user (which cascades to teams, venueBookings, eventRegistrations)
     const result = await db.delete(users).where(eq(users.id, id)).returning();
     return result.length > 0;
 };

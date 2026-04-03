@@ -3,7 +3,7 @@ import { authenticate } from '../middleware/auth';
 import { requireRole } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import { updateUserSchema } from '../utils/validators';
-import { findUserById, getAllUsers, updateUser, sanitizeUser } from '../models/User';
+import { findUserById, getAllUsers, updateUser, sanitizeUser, deleteUser } from '../models/User';
 
 const router = Router();
 
@@ -110,6 +110,43 @@ router.get('/:id', authenticate, requireRole('ADMIN'), async (req: Request, res:
     } catch (error) {
         res.status(500).json({
             error: 'Failed to fetch user',
+            message: error instanceof Error ? error.message : 'Unknown error',
+        });
+    }
+});
+
+// DELETE /api/users/:id - Delete user (admin only)
+router.delete('/:id', authenticate, requireRole('ADMIN'), async (req: Request, res: Response) => {
+    try {
+        if (req.params.id === req.user!.userId) {
+            return res.status(400).json({
+                error: 'Action denied',
+                message: 'You cannot delete your own admin account while logged in.',
+            });
+        }
+
+        const success = await deleteUser(req.params.id);
+
+        if (!success) {
+            return res.status(404).json({
+                error: 'User not found',
+                message: 'User with specified ID not found',
+            });
+        }
+
+        res.json({
+            message: 'User deleted successfully',
+        });
+    } catch (error) {
+        console.error('❌ Failed to delete user:', error);
+        if (error instanceof Error && error.message.includes('last admin user')) {
+            return res.status(400).json({
+                error: 'Action denied',
+                message: error.message,
+            });
+        }
+        res.status(500).json({
+            error: 'Failed to delete user',
             message: error instanceof Error ? error.message : 'Unknown error',
         });
     }

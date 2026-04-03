@@ -15,6 +15,13 @@
       "when": 1774853914573,
       "tag": "0001_gifted_silver_samurai",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1774973338403,
+      "tag": "0002_clear_inhumans",
+      "breakpoints": true
     }
   ]
 }

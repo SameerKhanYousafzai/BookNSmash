@@ -127,19 +127,15 @@ export default function EventDetail() {
     const eventDate = event.startDate || event.date;
     const eventTime = event.startDate ? new Date(event.startDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : event.time;
 
-    // Default image based on sport
-    const defaultEventImage = `https://images.unsplash.com/photo-${event.sport?.toLowerCase().includes('tennis') ? '1554068865-24cecd4e34b8' :
-        event.sport?.toLowerCase().includes('basketball') ? '1546519638-68e109498ffc' :
-            event.sport?.toLowerCase().includes('football') ? '1579952363873-27f3bade9f55' :
-                '1554068865-24cecd4e34b8'
-        }?w=1200`;
+    // Default image fallback
+    const defaultEventImage = 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=1470&auto=format&fit=crop';
 
     return (
         <div className="pb-16">
             {/* Hero Section */}
             <div className="relative h-96 bg-gray-900">
                 <img
-                    src={event.image || defaultEventImage}
+                    src={event.imageUrl || event.image_url || defaultEventImage}
                     alt={event.title}
                     className="w-full h-full object-cover opacity-60"
                 />

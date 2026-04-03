@@ -15,6 +15,7 @@ import {
     getEventParticipantCount,
     RegistrationError,
 } from '../models/Event';
+import { randomUUID } from 'crypto';
 
 const router = Router();
 
@@ -140,7 +141,10 @@ router.post('/', authenticate, requireRole('ADMIN'), validate(createEventSchema)
             ...req.body,
             startDate: new Date(req.body.startDate),
             endDate: new Date(req.body.endDate),
+            entryFee: Number(req.body.entryFee),
+            maxParticipants: Number(req.body.maxParticipants),
             status: (req.body.status || 'UPCOMING') as any,
+            imageUrl: req.body.image_url || null,
         };
 
         const event = await createEvent(eventData);
@@ -169,6 +173,17 @@ router.put('/:id', authenticate, requireRole('ADMIN'), validate(updateEventSchem
         }
         if (updateData.endDate) {
             updateData.endDate = new Date(updateData.endDate);
+        }
+        if (updateData.entryFee !== undefined) {
+            updateData.entryFee = Number(updateData.entryFee);
+        }
+        if (updateData.maxParticipants !== undefined) {
+            updateData.maxParticipants = Number(updateData.maxParticipants);
+        }
+        
+        if (updateData.image_url !== undefined) {
+            updateData.imageUrl = updateData.image_url;
+            delete updateData.image_url;
         }
 
         const event = await updateEvent(req.params.id, updateData);

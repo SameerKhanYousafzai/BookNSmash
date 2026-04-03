@@ -315,12 +315,13 @@ export const DataProvider = ({ children }) => {
     const addEvent = useCallback(async (eventData) => {
         try {
             const res = await api.post('/events', eventData);
+            const data = await res.json();
             if (res.ok) {
-                const data = await res.json();
                 dispatch({ type: ACTIONS.ADD_EVENT, payload: data.event });
-                return data.event;
+                // Return full data including any warning about image upload
+                return { event: data.event, warning: data.warning || null };
             }
-            throw new Error('Failed to create event');
+            throw new Error(data.message || data.error || 'Failed to create event');
         } catch (error) {
             console.error('❌ Add event failed:', error);
             throw error;
@@ -394,9 +395,10 @@ export const DataProvider = ({ children }) => {
         try {
             const res = await api.delete(`/venues/${id}`);
             if (!res.ok) {
+                const errData = await res.json().catch(() => ({}));
                 fetchedRef.venues = false;
                 fetchVenues();
-                throw new Error('Failed to delete venue');
+                throw new Error(errData.message || 'Failed to delete venue');
             }
         } catch (error) {
             console.error('❌ Delete venue failed:', error);
@@ -484,9 +486,10 @@ export const DataProvider = ({ children }) => {
         try {
             const res = await api.delete(`/users/${id}`);
             if (!res.ok) {
+                const errData = await res.json().catch(() => ({}));
                 fetchedRef.players = false;
                 fetchPlayers();
-                throw new Error('Failed to delete player');
+                throw new Error(errData.message || 'Failed to delete player');
             }
         } catch (error) {
             console.error('❌ Delete player failed:', error);

@@ -107,13 +107,13 @@ export default function Events() {
                     <Link key={event.id} to={`/events/${event.id}`}>
                         <Card className="group cursor-pointer h-full hover:shadow-xl transition-all duration-300 overflow-hidden">
                             {/* Image Section */}
-                            <div className="relative h-48 overflow-hidden">
+                            <div className="relative h-48 overflow-hidden bg-gray-100 flex items-center justify-center group-hover:bg-primary-50 transition-colors">
                                 <img
-                                    src={event.image}
+                                    src={event.imageUrl || event.image_url || 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=1470&auto=format&fit=crop'}
                                     alt={event.title}
                                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                                 />
-                                <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent opacity-80"></div>
 
                                 {/* Status Badge */}
                                 <div className="absolute top-3 right-3">
