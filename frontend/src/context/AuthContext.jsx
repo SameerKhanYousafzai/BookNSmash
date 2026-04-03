@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 
@@ -10,24 +10,20 @@ const AuthContext = createContext(null);
  * All auth operations call the backend API via the api service (with retry logic).
  */
 export const AuthProvider = ({ children }) => {
-    const [isAuthenticated, setIsAuthenticated] = useState(false);
-    const [userRole, setUserRole] = useState(null);
-    const [currentUser, setCurrentUser] = useState(null);
+    // Initialize auth state synchronously from localStorage to prevent race conditions
+    // with route guards (AdminRoute) that check auth immediately on mount.
+    const [isAuthenticated, setIsAuthenticated] = useState(() => {
+        const token = localStorage.getItem('accessToken');
+        const role = localStorage.getItem('userRole');
+        return !!(token && role);
+    });
+    const [userRole, setUserRole] = useState(() => localStorage.getItem('userRole'));
+    const [currentUser, setCurrentUser] = useState(() => {
+        const stored = localStorage.getItem('currentUser');
+        return stored ? JSON.parse(stored) : null;
+    });
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
-
-    // Check for existing auth on mount
-    useEffect(() => {
-        const token = localStorage.getItem('accessToken');
-        const storedRole = localStorage.getItem('userRole');
-        const storedUser = localStorage.getItem('currentUser');
-
-        if (token && storedRole) {
-            setIsAuthenticated(true);
-            setUserRole(storedRole);
-            setCurrentUser(storedUser ? JSON.parse(storedUser) : null);
-        }
-    }, []);
 
     /**
      * Helper: persist auth state to localStorage

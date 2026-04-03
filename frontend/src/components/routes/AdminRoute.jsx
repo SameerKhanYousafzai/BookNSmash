@@ -6,16 +6,23 @@ import { Loader2 } from 'lucide-react';
 
 /**
  * AdminRoute Component
- * Ensures only admin users can access admin routes
- * Authenticates against backend database to prevent localStorage bypass
+ * Ensures only admin users can access admin routes.
+ * Uses localStorage as synchronous source of truth to avoid race conditions
+ * when navigating immediately after login (React state may not have flushed yet).
  */
 const AdminRoute = ({ children }) => {
     const { isAuthenticated, userRole, logout } = useAuth();
     const [isVerifiedAdmin, setIsVerifiedAdmin] = useState(null);
 
+    // Check both React state AND localStorage to handle race conditions
+    const localToken = localStorage.getItem('accessToken');
+    const localRole = localStorage.getItem('userRole');
+    const hasAuth = isAuthenticated || !!(localToken && localRole);
+    const hasAdminRole = userRole === 'ADMIN' || localRole === 'ADMIN';
+
     useEffect(() => {
         const verifyAdminStatus = async () => {
-            if (!isAuthenticated || userRole !== 'ADMIN') {
+            if (!hasAuth || !hasAdminRole) {
                 setIsVerifiedAdmin(false);
                 return;
             }
@@ -30,7 +37,7 @@ const AdminRoute = ({ children }) => {
                 } else {
                     console.error('Server validation failed: User is not an ADMIN');
                     setIsVerifiedAdmin(false);
-                    logout(); // Trigger cleanup of spoofed local data
+                    logout();
                 }
             } catch (error) {
                 console.error('Admin validation check failed:', error);
@@ -39,9 +46,10 @@ const AdminRoute = ({ children }) => {
         };
 
         verifyAdminStatus();
-    }, [isAuthenticated, userRole, logout]);
+    }, [hasAuth, hasAdminRole]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    if (!isAuthenticated) return <Navigate to="/admin/login" replace />;
+    // Not authenticated at all — redirect to admin login
+    if (!hasAuth) return <Navigate to="/admin/login" replace />;
     
     // While server-side verification is ongoing
     if (isVerifiedAdmin === null) {
