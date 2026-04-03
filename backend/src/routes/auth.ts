@@ -137,7 +137,8 @@ router.post('/admin/login', validate(loginSchema), async (req: Request, res: Res
 // POST /api/auth/refresh - Refresh access token
 router.post('/refresh', async (req: Request, res: Response) => {
     try {
-        const refreshToken = req.cookies?.refreshToken;
+        const refreshToken = req.cookies?.refreshToken || req.body?.refreshToken;
+
 
         if (!refreshToken) {
             return res.status(401).json({

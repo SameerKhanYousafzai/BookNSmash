@@ -12,10 +12,22 @@ const API_BASE = import.meta.env.VITE_API_URL || '/api';
  */
 async function apiFetch(endpoint, options = {}, retries = 3) {
     const url = `${API_BASE}${endpoint}`;
+    const isFormData = options.body instanceof FormData;
+
+    // Build headers: don't set Content-Type for FormData (browser needs to set multipart boundary)
+    const baseHeaders = isFormData ? {} : { 'Content-Type': 'application/json' };
+
+    // Attach Authorization Bearer token from localStorage if available
+    const token = localStorage.getItem('accessToken');
+    if (token) {
+        baseHeaders['Authorization'] = `Bearer ${token}`;
+    }
+
     const config = {
-        headers: { 'Content-Type': 'application/json' },
         credentials: 'include', // Send cookies with every request
         ...options,
+        // Merge headers after options spread so baseHeaders aren't overwritten
+        headers: { ...baseHeaders, ...(options.headers || {}) },
     };
 
     for (let attempt = 1; attempt <= retries; attempt++) {
@@ -26,24 +38,39 @@ async function apiFetch(endpoint, options = {}, retries = 3) {
             // Do NOT trap 403 (Forbidden) in a refresh cycle, because 403 means valid token but invalid role.
             if (response.status === 401 && !options._retry) {
                 try {
-                    console.log('🔄 Token expired or unauthorized. Attempting refresh via cookie...');
+                    console.log('🔄 Token expired or unauthorized. Attempting refresh...');
+                    const storedRefreshToken = localStorage.getItem('refreshToken');
+                    
                     const refreshRes = await fetch(`${API_BASE}/auth/refresh`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        credentials: 'include'
+                        credentials: 'include',
+                        body: JSON.stringify({ refreshToken: storedRefreshToken }),
                     });
 
                     if (refreshRes.ok) {
+                        const refreshData = await refreshRes.json();
                         console.log('✅ Token refreshed successfully');
-                        config._retry = true; // Prevent infinite loops
                         
-                        // Retry the original request
+                        // Save the new access token to localStorage
+                        if (refreshData.accessToken) {
+                            localStorage.setItem('accessToken', refreshData.accessToken);
+                        }
+                        
+                        // Retry the original request with the new token
+                        config._retry = true;
+                        config.headers = {
+                            ...config.headers,
+                            'Authorization': `Bearer ${refreshData.accessToken}`,
+                        };
                         response = await fetch(url, config);
                     } else {
                         // If refresh token is also invalid, clear auth state
                         localStorage.removeItem('isAuthenticated');
                         localStorage.removeItem('userRole');
                         localStorage.removeItem('currentUser');
+                        localStorage.removeItem('accessToken');
+                        localStorage.removeItem('refreshToken');
                         
                         // Prevent infinite redirect loops if already on auth pages
                         const path = window.location.pathname;
@@ -87,17 +114,21 @@ async function apiFetch(endpoint, options = {}, retries = 3) {
 export const api = {
     get: (endpoint) => apiFetch(endpoint),
 
-    post: (endpoint, body) =>
-        apiFetch(endpoint, {
+    post: (endpoint, body) => {
+        const isFormData = body instanceof FormData;
+        return apiFetch(endpoint, {
             method: 'POST',
-            body: JSON.stringify(body),
-        }),
+            body: isFormData ? body : JSON.stringify(body),
+        });
+    },
 
-    put: (endpoint, body) =>
-        apiFetch(endpoint, {
+    put: (endpoint, body) => {
+        const isFormData = body instanceof FormData;
+        return apiFetch(endpoint, {
             method: 'PUT',
-            body: JSON.stringify(body),
-        }),
+            body: isFormData ? body : JSON.stringify(body),
+        });
+    },
 
     delete: (endpoint) =>
         apiFetch(endpoint, { method: 'DELETE' }),

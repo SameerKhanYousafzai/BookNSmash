@@ -27,14 +27,18 @@ export const AuthProvider = ({ children }) => {
 
     /**
      * Helper: persist auth state to localStorage
-     * Stores accessToken so the api service can attach Bearer headers on cross-origin requests.
+     * Stores tokens so the api service can attach Bearer headers on cross-origin requests
+     * where HTTP-only cookies may be blocked by the browser.
      */
-    const persistAuth = (user, role, accessToken) => {
+    const persistAuth = (user, role, accessToken, refreshToken) => {
         localStorage.setItem('isAuthenticated', 'true');
         localStorage.setItem('userRole', role);
         localStorage.setItem('currentUser', JSON.stringify(user));
         if (accessToken) {
             localStorage.setItem('accessToken', accessToken);
+        }
+        if (refreshToken) {
+            localStorage.setItem('refreshToken', refreshToken);
         }
     };
 
@@ -54,7 +58,7 @@ export const AuthProvider = ({ children }) => {
             setIsAuthenticated(true);
             setUserRole(data.user.role || 'USER');
             setCurrentUser(data.user);
-            persistAuth(data.user, data.user.role || 'USER', data.accessToken);
+            persistAuth(data.user, data.user.role || 'USER', data.accessToken, data.refreshToken);
 
             navigate('/');
             return { success: true };
@@ -82,7 +86,7 @@ export const AuthProvider = ({ children }) => {
             setIsAuthenticated(true);
             setUserRole('USER');
             setCurrentUser(data.user);
-            persistAuth(data.user, 'USER', data.accessToken);
+            persistAuth(data.user, 'USER', data.accessToken, data.refreshToken);
 
             navigate('/');
             return { success: true };
@@ -110,7 +114,7 @@ export const AuthProvider = ({ children }) => {
             setIsAuthenticated(true);
             setUserRole('ADMIN');
             setCurrentUser(data.user);
-            persistAuth(data.user, 'ADMIN', data.accessToken);
+            persistAuth(data.user, 'ADMIN', data.accessToken, data.refreshToken);
 
             navigate('/admin/dashboard/weekly');
             return { success: true };
@@ -139,6 +143,7 @@ export const AuthProvider = ({ children }) => {
         localStorage.removeItem('userRole');
         localStorage.removeItem('currentUser');
         localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
 
         navigate('/login');
     };
