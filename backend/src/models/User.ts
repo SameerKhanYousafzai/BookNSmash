@@ -1,5 +1,5 @@
-import { eq, and, gt, count, or } from 'drizzle-orm';
-import { db, users, teams, matches } from '../db';
+import { eq, and, gt, count, or, inArray, desc } from 'drizzle-orm';
+import { db, users, teams, matches, events, eventRegistrations, teamMembers, venues } from '../db';
 import { hashPassword } from '../services/password';
 
 // Type derived from Drizzle schema
@@ -148,4 +148,106 @@ export const ensureAdminUser = async (): Promise<void> => {
     } else {
         console.log('ℹ️  Admin user already exists');
     }
+};
+
+// Get Dashboard Data for User Profile
+export const getUserDashboardData = async (userId: string) => {
+    // 1. Registered Events (Joined with Venues)
+    const registeredEventsRaw = await db
+        .select({
+            id: events.id,
+            title: events.title,
+            sport: events.sport,
+            date: events.startDate,
+            time: events.startDate,
+            venue: venues.name,
+            status: eventRegistrations.status,
+            eventStatus: events.status
+        })
+        .from(eventRegistrations)
+        .innerJoin(events, eq(eventRegistrations.eventId, events.id))
+        .leftJoin(venues, eq(events.venueId, venues.id))
+        .where(eq(eventRegistrations.userId, userId))
+        .orderBy(desc(eventRegistrations.registeredAt));
+
+    const registeredEvents = registeredEventsRaw.map(e => ({
+        ...e,
+        // Format to what frontend expects
+        date: e.date,
+        time: e.time
+    }));
+
+    // 2. Teams
+    const myTeamsData = await db.select().from(teams).where(eq(teams.captainId, userId));
+    const memberTeamsIdResult = await db.select({ teamId: teamMembers.teamId }).from(teamMembers).where(eq(teamMembers.userId, userId));
+    const memberTeamIds = memberTeamsIdResult.map((t: any) => t.teamId);
+    
+    const allUserTeamIds = [...new Set([...myTeamsData.map((t: any) => t.id), ...memberTeamIds])];
+    
+    let allUserTeams: any[] = [];
+    if (allUserTeamIds.length > 0) {
+       allUserTeams = await db.select().from(teams).where(inArray(teams.id, allUserTeamIds));
+    }
+
+    // 3. Matches
+    let userMatchesMapped: any[] = [];
+    if (allUserTeamIds.length > 0) {
+        const rawMatches = await db
+            .select({
+                id: matches.id,
+                score: matches.score,
+                matchDate: matches.matchDate,
+                status: matches.status,
+                winnerId: matches.winnerId,
+                team1Id: matches.team1Id,
+                team2Id: matches.team2Id,
+                eventSport: events.sport,
+                venueName: venues.name
+            })
+            .from(matches)
+            .leftJoin(events, eq(matches.eventId, events.id))
+            .leftJoin(venues, eq(events.venueId, venues.id))
+            .where(or(
+                inArray(matches.team1Id, allUserTeamIds),
+                inArray(matches.team2Id, allUserTeamIds)
+            ))
+            .orderBy(desc(matches.matchDate));
+            
+        // We need team names for 'opponent'
+        const allTeamsData = await db.select().from(teams);
+        const teamMap = new Map(allTeamsData.map((t: any) => [t.id, t.name]));
+
+        userMatchesMapped = rawMatches.map((m: any) => {
+            const isTeam1 = allUserTeamIds.includes(m.team1Id);
+            const myTeamId = isTeam1 ? m.team1Id : m.team2Id;
+            const opponentTeamId = isTeam1 ? m.team2Id : m.team1Id;
+            
+            const opponentName = teamMap.get(opponentTeamId) || 'Unknown Team';
+            
+            let result = 'Pending';
+            if (m.status === 'COMPLETED') {
+                if (m.winnerId === myTeamId) result = 'Won';
+                else if (m.winnerId) result = 'Lost';
+                else result = 'Draw';
+            }
+            
+            return {
+                id: m.id,
+                sport: m.eventSport || 'Sports Match',
+                result,
+                score: m.score || '',
+                date: m.matchDate,
+                time: m.matchDate,
+                venue: m.venueName || 'Unknown Venue',
+                opponent: opponentName,
+                status: m.status === 'SCHEDULED' ? 'Upcoming' : (m.status === 'COMPLETED' ? 'Completed' : m.status)
+            };
+        });
+    }
+    
+    return {
+        registrations: registeredEvents,
+        teams: allUserTeams,
+        matches: userMatchesMapped,
+    };
 };

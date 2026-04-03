@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, Calendar, MapPin, Users, DollarSign, Trophy, Clock, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
+import { ArrowLeft, Calendar, MapPin, Users, Ticket, Trophy, Clock, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 import Button from '../../components/common/Button';
 import Card from '../../components/common/Card';
 import Modal from '../../components/common/Modal';
@@ -25,6 +25,50 @@ export default function EventDetail() {
     const [showRegistrationModal, setShowRegistrationModal] = useState(false);
     const [registering, setRegistering] = useState(false);
     const [message, setMessage] = useState({ type: '', text: '' });
+    const [isRegistered, setIsRegistered] = useState(false);
+    const [checkingRegistration, setCheckingRegistration] = useState(false);
+    const [liveParticipants, setLiveParticipants] = useState(event?.participantCount || event?.participants || 0);
+
+    // Fetch realtime capacity straight from DB on mount
+    useEffect(() => {
+        const fetchLiveCapacity = async () => {
+            if (!event) return;
+            try {
+                const res = await api.get(`/events/${event.id}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.registeredCount !== undefined) {
+                        setLiveParticipants(data.registeredCount);
+                    } else if (data.participants !== undefined) {
+                        setLiveParticipants(data.participants);
+                    }
+                }
+            } catch (err) {
+                console.error("Failed to fetch live event capacity", err);
+            }
+        };
+        fetchLiveCapacity();
+    }, [event?.id]);
+
+    useEffect(() => {
+        const checkRegistration = async () => {
+            if (!currentUser || !event) return;
+            setCheckingRegistration(true);
+            try {
+                const res = await api.get(`/events/${event.id}/registration-status`);
+                const data = await res.json();
+                if (res.status === 200) {
+                    setIsRegistered(data.isRegistered);
+                }
+            } catch (err) {
+                console.error("Failed to check registration status:", err);
+            } finally {
+                setCheckingRegistration(false);
+            }
+        };
+
+        checkRegistration();
+    }, [currentUser, event]);
 
     if (loading.events && !event) {
         return (
@@ -99,6 +143,14 @@ export default function EventDetail() {
 
             if (res.status === 201) {
                 setMessage({ type: 'success', text: 'Registration successful! You are now registered for this event.' });
+                setIsRegistered(true);
+                
+                if (data.registeredCount !== undefined) {
+                    setLiveParticipants(data.registeredCount);
+                } else {
+                    setLiveParticipants(prev => prev + 1);
+                }
+
                 setTimeout(() => {
                     setShowRegistrationModal(false);
                     setMessage({ type: '', text: '' });
@@ -118,10 +170,9 @@ export default function EventDetail() {
         }
     };
 
-    const participants = event.participantCount || event.participants || 0;
     const maxParticipants = event.maxParticipants || 50;
-    const spotsRemaining = maxParticipants - participants;
-    const percentFilled = (participants / maxParticipants) * 100;
+    const spotsRemaining = Math.max(0, maxParticipants - liveParticipants);
+    const percentFilled = Math.min(100, (liveParticipants / maxParticipants) * 100);
 
     // Handle both field names (legacy vs DB)
     const eventDate = event.startDate || event.date;
@@ -208,7 +259,7 @@ export default function EventDetail() {
                                     </div>
                                 </div>
                                 <div className="flex items-start gap-3">
-                                    <DollarSign className="w-6 h-6 text-primary-600 flex-shrink-0 mt-1" />
+                                    <Ticket className="w-6 h-6 text-primary-600 flex-shrink-0 mt-1" />
                                     <div>
                                         <div className="text-sm text-gray-600">Entry Fee</div>
                                         <div className="font-semibold text-gray-900">
@@ -279,7 +330,7 @@ export default function EventDetail() {
                                 <div className="flex items-center justify-between mb-2">
                                     <span className="text-sm text-gray-600">Registration</span>
                                     <span className="text-sm font-semibold text-gray-900">
-                                        {participants}/{maxParticipants}
+                                        {liveParticipants}/{maxParticipants}
                                     </span>
                                 </div>
                                 <div className="w-full bg-gray-200 rounded-full h-2">
@@ -300,14 +351,24 @@ export default function EventDetail() {
                                 </div>
                             )}
 
-                            <Button
-                                variant="primary"
-                                className="w-full mb-4"
-                                onClick={() => setShowRegistrationModal(true)}
-                                disabled={event.status !== 'Open' && event.status !== 'UPCOMING'}
-                            >
-                                {(event.status === 'Open' || event.status === 'UPCOMING') ? 'Register Now' : 'Registration Closed'}
-                            </Button>
+                            {isRegistered ? (
+                                <Button
+                                    variant="outline"
+                                    className="w-full mb-4 bg-gray-100 text-gray-500 cursor-not-allowed border-gray-300"
+                                    disabled={true}
+                                >
+                                    Already Registered
+                                </Button>
+                            ) : (
+                                <Button
+                                    variant="primary"
+                                    className="w-full mb-4"
+                                    onClick={() => setShowRegistrationModal(true)}
+                                    disabled={checkingRegistration || spotsRemaining === 0 || (event.status !== 'Open' && event.status !== 'UPCOMING')}
+                                >
+                                    {spotsRemaining === 0 ? 'Event Full' : (event.status === 'Open' || event.status === 'UPCOMING') ? 'Register Now' : 'Registration Closed'}
+                                </Button>
+                            )}
 
                             <div className="space-y-3 text-sm">
                                 <div className="flex items-start gap-2">

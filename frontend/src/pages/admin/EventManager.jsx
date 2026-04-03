@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Plus, Edit2, Trash2, Search, Calendar, MapPin, Clock, Info, CheckCircle, AlertCircle, Loader2, Image as ImageIcon, X } from 'lucide-react';
+import { Plus, Edit2, Trash2, Search, Calendar, MapPin, Clock, Info, CheckCircle, AlertCircle, Loader2, Image as ImageIcon, X, Users } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import Card from '../../components/common/Card';
 import Button from '../../components/common/Button';
+import api from '../../services/api';
 
 /**
  * EventManager Component
@@ -22,6 +23,35 @@ export default function EventManager() {
     const [searchTerm, setSearchTerm] = useState('');
     const [statusMessage, setStatusMessage] = useState(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
+
+    // Registrants Tracking
+    const [registrants, setRegistrants] = useState(null);
+    const [loadingRegistrants, setLoadingRegistrants] = useState(false);
+
+    const fetchRegistrants = async (eventId) => {
+        const targetEvent = events.find(e => e.id === eventId);
+        if (!targetEvent) return;
+
+        setRegistrants({ event: targetEvent, data: [] });
+        setLoadingRegistrants(true);
+
+        try {
+            const res = await api.get(`/events/${eventId}/registrations`);
+            if (res.ok) {
+                const data = await res.json();
+                setRegistrants({ event: targetEvent, data: data.registrations || [] });
+            } else {
+                setStatusMessage({ type: 'error', text: 'Failed to fetch registrants.' });
+                setRegistrants(null);
+            }
+        } catch (err) {
+            console.error("Registrants error:", err);
+            setStatusMessage({ type: 'error', text: 'Error fetching registrants.' });
+            setRegistrants(null);
+        } finally {
+            setLoadingRegistrants(false);
+        }
+    };
 
     const [formData, setFormData] = useState({
         title: '',
@@ -247,6 +277,13 @@ export default function EventManager() {
                                     </div>
                                     <div className="flex gap-1 ml-2">
                                         <button
+                                            onClick={(e) => { e.stopPropagation(); fetchRegistrants(event.id); }}
+                                            className="p-2 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all"
+                                            title="View Registrants"
+                                        >
+                                            <Users className="w-4 h-4" />
+                                        </button>
+                                        <button
                                             onClick={() => handleEdit(event)}
                                             className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
                                             title="Edit Event"
@@ -280,7 +317,7 @@ export default function EventManager() {
 
                                 <div className="mt-4 flex items-center justify-between pt-4 border-t border-gray-100">
                                     <div className="text-xs text-gray-400">
-                                        Max: {event.maxParticipants} slots
+                                        {event.registeredCount || event.participantCount || 0} / {event.maxParticipants > 0 ? event.maxParticipants : '∞'} spots filled
                                     </div>
                                     <div className="text-sm font-bold text-primary-600">
                                         {parseFloat(event.entryFee) > 0 ? `Rs ${parseFloat(event.entryFee).toLocaleString()}` : 'FREE'}
@@ -526,6 +563,72 @@ export default function EventManager() {
                                 </Button>
                             </div>
                         </form>
+                    </Card>
+                </div>
+            )}
+
+            {/* Registrants Modal */}
+            {registrants && (
+                <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+                    <Card className="w-full max-w-4xl max-h-[90vh] flex flex-col p-8 shadow-2xl relative animate-in zoom-in-95 duration-200">
+                        <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-100 shrink-0">
+                            <div>
+                                <h2 className="text-2xl font-display font-bold text-gray-900">
+                                    Registrants for {registrants.event.title}
+                                </h2>
+                                <p className="text-sm text-gray-500 mt-1">
+                                    {registrants.data.length} / {registrants.event.maxParticipants > 0 ? registrants.event.maxParticipants : '∞'} slots currently booked
+                                </p>
+                            </div>
+                            <button
+                                onClick={() => setRegistrants(null)}
+                                className="text-gray-400 hover:text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-all p-2"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+                        
+                        <div className="overflow-y-auto flex-1 bg-gray-50 rounded-xl border border-gray-100">
+                            {loadingRegistrants ? (
+                                <div className="p-12 flex flex-col items-center justify-center">
+                                    <Loader2 className="w-8 h-8 text-primary-600 animate-spin mb-4" />
+                                    <p className="text-gray-500 font-medium tracking-wide">Fetching live registry...</p>
+                                </div>
+                            ) : registrants.data.length > 0 ? (
+                                <table className="w-full text-left border-collapse">
+                                    <thead className="bg-gray-100/80 sticky top-0 backdrop-blur-sm shadow-sm z-10">
+                                        <tr>
+                                            <th className="px-6 py-4 font-bold text-xs text-gray-500 uppercase tracking-wider">Player Name</th>
+                                            <th className="px-6 py-4 font-bold text-xs text-gray-500 uppercase tracking-wider">Email</th>
+                                            <th className="px-6 py-4 font-bold text-xs text-gray-500 uppercase tracking-wider">Registered At</th>
+                                            <th className="px-6 py-4 font-bold text-xs text-gray-500 uppercase tracking-wider text-right">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-100 bg-white">
+                                        {registrants.data.map((reg, idx) => (
+                                            <tr key={idx} className="hover:bg-gray-50/50 transition-colors">
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">{reg.userName || 'Unknown'}</td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{reg.userEmail || 'N/A'}</td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                    {new Date(reg.registeredAt).toLocaleString()}
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-right">
+                                                    <span className="px-3 py-1 bg-green-50 text-green-700 text-[10px] font-bold uppercase tracking-wider rounded">
+                                                        {reg.status}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            ) : (
+                                <div className="p-16 text-center flex flex-col items-center justify-center">
+                                    <Users className="w-16 h-16 text-gray-200 mb-4" />
+                                    <h3 className="text-xl font-semibold text-gray-900 mb-2">No Registrants Yet</h3>
+                                    <p className="text-gray-500">This event hasn't received any bookings.</p>
+                                </div>
+                            )}
+                        </div>
                     </Card>
                 </div>
             )}

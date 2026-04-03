@@ -1,15 +1,10 @@
-import { Trophy, Calendar, MapPin, Award, TrendingUp, Clock } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Trophy, Calendar, MapPin, Award, TrendingUp, Clock, CheckCircle } from 'lucide-react';
 import Card from '../components/common/Card';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 import Button from '../components/common/Button';
-
-// Mock data until a /me matches endpoint is created
-const userMatchHistory = [
-    { id: 1, sport: 'Tennis', result: 'Won', score: '6-4, 6-3', date: '2024-03-15', time: '18:00', venue: 'Central Courts', opponent: 'Alex Smith', status: 'Completed' },
-    { id: 2, sport: 'Basketball', result: 'Lost', date: '2024-03-10', time: '19:30', venue: 'Downtown Arena', status: 'Completed' },
-    { id: 3, sport: 'Tennis', date: '2024-03-25', time: '10:00', venue: 'Central Courts', opponent: 'Chris Johnson', status: 'Upcoming' }
-];
+import api from '../services/api';
 
 /**
  * UserProfile Page
@@ -19,12 +14,35 @@ const userMatchHistory = [
 export default function UserProfile() {
     const { currentUser } = useAuth();
     const { teams, addTeam, updateTeam } = useData();
+    const [dashboardData, setDashboardData] = useState({
+        registrations: [],
+        teams: [],
+        matches: []
+    });
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchDashboard = async () => {
+            try {
+                const res = await api.get('/users/me/dashboard');
+                const data = await res.json();
+                if (res.status === 200) {
+                    setDashboardData(data);
+                }
+            } catch (err) {
+                console.error("Failed to fetch dashboard data:", err);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        fetchDashboard();
+    }, []);
 
     // Find the user's team
-    const myTeam = (teams || []).find(t => t.creatorUserId === currentUser?.id || t.createdBy === currentUser?.id);
+    const myTeam = dashboardData.teams.length > 0 ? dashboardData.teams[0] : null;
 
-    const [isTeamFormOpen, setIsTeamFormOpen] = React.useState(false);
-    const [teamFormData, setTeamFormData] = React.useState({
+    const [isTeamFormOpen, setIsTeamFormOpen] = useState(false);
+    const [teamFormData, setTeamFormData] = useState({
         name: '',
         sport: '',
         description: '',
@@ -90,8 +108,9 @@ export default function UserProfile() {
         setIsTeamFormOpen(false);
     };
 
-    const completedMatches = userMatchHistory.filter(match => match.status === 'Completed');
-    const upcomingMatches = userMatchHistory.filter(match => match.status === 'Upcoming');
+    const completedMatches = dashboardData.matches.filter(match => match.status === 'Completed');
+    const upcomingMatches = dashboardData.matches.filter(match => match.status === 'Upcoming');
+    const registeredEvents = dashboardData.registrations || [];
 
     const totalMatches = completedMatches.length;
     const wins = completedMatches.filter(match => match.result === 'Won').length;
@@ -139,7 +158,13 @@ export default function UserProfile() {
                 </div>
             </Card>
 
-            {/* Stats Grid */}
+            {isLoading ? (
+                <div className="flex justify-center py-12">
+                    <div className="w-8 h-8 rounded-full border-4 border-primary-500 border-t-transparent animate-spin"></div>
+                </div>
+            ) : (
+                <>
+                    {/* Stats Grid */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                 <Card className="p-6 text-center bg-gradient-to-br from-blue-50 to-blue-100">
                     <Calendar className="w-8 h-8 text-blue-600 mx-auto mb-3" />
@@ -310,6 +335,45 @@ export default function UserProfile() {
                 </div>
             )}
 
+            {/* Registered Events */}
+            {registeredEvents.length > 0 && (
+                <div>
+                    <h2 className="text-2xl font-bold text-gray-900 mb-4 flex items-center">
+                        <CheckCircle className="w-6 h-6 mr-2 text-primary-600" />
+                        Registered Events
+                    </h2>
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        {registeredEvents.map((reg) => (
+                            <Card key={reg.id} className="p-6 border-l-4 border-green-500">
+                                <div className="flex items-start justify-between mb-4">
+                                    <div>
+                                        <h3 className="text-xl font-bold text-gray-900">{reg.title}</h3>
+                                        <div className="flex gap-2">
+                                            <span className="inline-block px-3 py-1 mt-2 rounded-full text-xs font-semibold bg-gray-100 text-gray-700">
+                                                {reg.sport}
+                                            </span>
+                                            <span className={`inline-block px-3 py-1 mt-2 rounded-full text-xs font-semibold ${reg.status === 'REGISTERED' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                                                {reg.status}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <div className="flex items-center text-sm text-gray-600">
+                                        <Calendar className="w-4 h-4 mr-2 text-primary-600" />
+                                        {new Date(reg.date).toLocaleDateString()}
+                                    </div>
+                                    <div className="flex items-center text-sm text-gray-600">
+                                        <MapPin className="w-4 h-4 mr-2 text-primary-600" />
+                                        {reg.venue || 'TBD'}
+                                    </div>
+                                </div>
+                            </Card>
+                        ))}
+                    </div>
+                </div>
+            )}
+
             {/* Upcoming Matches */}
             {upcomingMatches.length > 0 && (
                 <div>
@@ -400,6 +464,8 @@ export default function UserProfile() {
                     ))}
                 </div>
             </div>
+            </>
+            )}
         </div>
     );
 }

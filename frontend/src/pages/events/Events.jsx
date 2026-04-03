@@ -17,8 +17,9 @@ export default function Events() {
     const filteredEvents = events.filter(event => {
         if (filters.sport && event.sport !== filters.sport) return false;
         if (filters.status && event.status !== filters.status) return false;
-        if (filters.priceRange === 'free' && event.price > 0) return false;
-        if (filters.priceRange === 'paid' && event.price === 0) return false;
+        const fee = parseFloat(event.entryFee || event.price) || 0;
+        if (filters.priceRange === 'free' && fee > 0) return false;
+        if (filters.priceRange === 'paid' && fee === 0) return false;
         return true;
     });
 
@@ -160,7 +161,7 @@ export default function Events() {
                                     <div className="flex items-center text-[10px] text-gray-700">
                                         <Users className="w-3.5 h-3.5 mr-2 text-primary-600 flex-shrink-0" />
                                         <span className="leading-none">
-                                            {event.participants}/{event.maxParticipants} participants
+                                            {event.registeredCount || event.participantCount || 0} / {event.maxParticipants > 0 ? event.maxParticipants : '∞'} participants
                                         </span>
                                     </div>
                                 </div>
@@ -168,9 +169,9 @@ export default function Events() {
                                 {/* Price - Centered above separator */}
                                 <div className="text-center mb-4">
                                     <span className="text-xs text-gray-500 mr-2">Entry Fee</span>
-                                    {event.price > 0 ? (
+                                    {parseFloat(event.entryFee || event.price) > 0 ? (
                                         <span className="text-lg font-bold text-primary-600">
-                                            {formatCurrency(event.price)}
+                                            {formatCurrency(event.entryFee || event.price)}
                                         </span>
                                     ) : (
                                         <span className="text-lg font-bold text-green-600">

@@ -1,4 +1,4 @@
-import { eq, ilike, and, sql, desc } from 'drizzle-orm';
+import { eq, ilike, and, sql, desc, inArray } from 'drizzle-orm';
 import { db, events, eventRegistrations, users } from '../db';
 
 // Types derived from Drizzle schema
@@ -91,7 +91,34 @@ export const getAllEvents = async (filters?: {
         .limit(filters?.limit ?? 50)
         .offset(filters?.offset ?? 0);
 
-    return { events: rows, total: count };
+    // Fetch batch participant counts
+    const eventIds = rows.map(e => e.id);
+    let counts: Record<string, number> = {};
+    if (eventIds.length > 0) {
+        const countsData = await db
+            .select({ 
+                eventId: eventRegistrations.eventId, 
+                count: sql<number>`count(*)::int` 
+            })
+            .from(eventRegistrations)
+            .where(
+                and(
+                    inArray(eventRegistrations.eventId, eventIds),
+                    eq(eventRegistrations.status, 'REGISTERED')
+                )
+            )
+            .groupBy(eventRegistrations.eventId);
+            
+        countsData.forEach(c => { counts[c.eventId] = c.count; });
+    }
+
+    const eventsWithCounts = rows.map(e => ({
+        ...e,
+        participantCount: counts[e.id] || 0,
+        registeredCount: counts[e.id] || 0
+    }));
+
+    return { events: eventsWithCounts as Event[], total: count };
 };
 
 export const updateEvent = async (
@@ -160,6 +187,24 @@ export const registerUserForEvent = async (
 
     console.log(`✅ User ${userId} registered for event ${eventId}`);
     return event;
+};
+
+export const checkRegistrationStatus = async (
+    eventId: string,
+    userId: string
+): Promise<boolean> => {
+    const [existing] = await db
+        .select()
+        .from(eventRegistrations)
+        .where(
+            and(
+                eq(eventRegistrations.eventId, eventId),
+                eq(eventRegistrations.userId, userId)
+            )
+        )
+        .limit(1);
+        
+    return !!existing;
 };
 
 export const unregisterUserFromEvent = async (
@@ -245,7 +290,12 @@ export const getEventParticipantCount = async (eventId: string): Promise<number>
     const [{ count }] = await db
         .select({ count: sql<number>`count(*)::int` })
         .from(eventRegistrations)
-        .where(eq(eventRegistrations.eventId, eventId));
+        .where(
+            and(
+                eq(eventRegistrations.eventId, eventId),
+                eq(eventRegistrations.status, 'REGISTERED')
+            )
+        );
 
     return count;
 };

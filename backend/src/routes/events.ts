@@ -14,6 +14,7 @@ import {
     getAllRegistrations,
     getEventParticipantCount,
     RegistrationError,
+    checkRegistrationStatus,
 } from '../models/Event';
 import { randomUUID } from 'crypto';
 
@@ -119,15 +120,42 @@ router.get('/:id', async (req: Request, res: Response) => {
             });
         }
 
-        // Include participant count
-        const participants = await getEventParticipantCount(req.params.id);
+        const registeredCount = await getEventParticipantCount(req.params.id);
+        const remainingSpots = event.maxParticipants - registeredCount;
 
-        res.json({ event, participants });
+        res.json({ 
+            event, 
+            participants: registeredCount,
+            registeredCount,
+            remainingSpots
+        });
     } catch (error) {
         console.error('❌ Failed to fetch event:', error);
         res.status(500).json({
             error: 'Failed to fetch event',
             message: error instanceof Error ? error.message : 'Unknown error',
+        });
+    }
+});
+
+// GET /api/events/:id/registrations - Get registrants for an event (admin only)
+router.get('/:id/registrations', authenticate, requireRole('ADMIN'), async (req: Request, res: Response) => {
+    try {
+        const result = await getAllRegistrations({
+            eventId: req.params.id,
+            status: 'REGISTERED',
+            limit: 1000, 
+        });
+        
+        res.json({
+            registrations: result.registrations,
+            total: result.total
+        });
+    } catch (error) {
+        console.error('❌ Failed to fetch event registrations:', error);
+        res.status(500).json({
+            error: 'Database query failed',
+            message: 'An error occurred while retrieving event registrations',
         });
     }
 });
@@ -232,15 +260,38 @@ router.delete('/:id', authenticate, requireRole('ADMIN'), async (req: Request, r
     }
 });
 
+// GET /api/events/:id/registration-status - Check if user is registered (authenticated)
+router.get('/:id/registration-status', authenticate, async (req: Request, res: Response) => {
+    try {
+        const userId = req.user!.userId;
+        const isRegistered = await checkRegistrationStatus(req.params.id, userId);
+
+        res.json({
+            isRegistered,
+        });
+    } catch (error) {
+        console.error('❌ Failed to check registration status:', error);
+        res.status(500).json({
+            error: 'Failed to check status',
+            message: error instanceof Error ? error.message : 'Unknown error',
+        });
+    }
+});
+
 // POST /api/events/:id/register - Register for event (authenticated)
 router.post('/:id/register', authenticate, async (req: Request, res: Response) => {
     try {
         const userId = req.user!.userId;
         const event = await registerUserForEvent(req.params.id, userId);
+        
+        const registeredCount = await getEventParticipantCount(req.params.id);
+        const remainingSpots = event.maxParticipants - registeredCount;
 
         res.status(201).json({
             message: 'Successfully registered for event',
             event,
+            registeredCount,
+            remainingSpots,
         });
     } catch (error) {
         if (error instanceof RegistrationError) {

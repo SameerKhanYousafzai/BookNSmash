@@ -178,17 +178,17 @@ export default function Home() {
                                         <div className="flex items-center text-[10px] text-gray-700">
                                             <Users className="w-3.5 h-3.5 mr-2 text-primary-600 flex-shrink-0" />
                                             <span className="leading-none">
-                                                {event.participants}/{event.maxParticipants} participants
+                                                {event.registeredCount || event.participantCount || 0} / {event.maxParticipants > 0 ? event.maxParticipants : '∞'} participants
                                             </span>
                                         </div>
                                     </div>
 
                                     {/* Price - Only show if paid */}
-                                    {event.price > 0 && (
+                                    {parseFloat(event.entryFee || event.price) > 0 && (
                                         <div className="pt-4 border-t border-gray-100 text-center">
                                             <span className="text-xs text-gray-500 mr-2">Entry Fee</span>
                                             <span className="text-lg font-bold text-primary-600">
-                                                {formatCurrency(event.price)}
+                                                {formatCurrency(event.entryFee || event.price)}
                                             </span>
                                         </div>
                                     )}

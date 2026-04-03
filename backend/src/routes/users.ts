@@ -3,9 +3,23 @@ import { authenticate } from '../middleware/auth';
 import { requireRole } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import { updateUserSchema } from '../utils/validators';
-import { findUserById, getAllUsers, updateUser, sanitizeUser, deleteUser } from '../models/User';
+import { findUserById, getAllUsers, updateUser, sanitizeUser, deleteUser, getUserDashboardData } from '../models/User';
 
 const router = Router();
+
+// GET /api/users/me/dashboard - Get user data for Profile dashboard
+router.get('/me/dashboard', authenticate, async (req: Request, res: Response) => {
+    try {
+        const dashboardData = await getUserDashboardData(req.user!.userId);
+        res.json(dashboardData);
+    } catch (error) {
+        console.error('❌ Failed to fetch user dashboard data:', error);
+        res.status(500).json({
+            error: 'Failed to fetch dashboard',
+            message: error instanceof Error ? error.message : 'Unknown error',
+        });
+    }
+});
 
 // GET /api/users/me - Get current user profile
 router.get('/me', authenticate, async (req: Request, res: Response) => {
