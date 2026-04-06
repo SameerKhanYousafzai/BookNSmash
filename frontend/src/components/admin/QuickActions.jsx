@@ -7,8 +7,7 @@ const actions = [
     { label: 'Manage Players', icon: Users, path: '/admin/players', gradient: 'from-emerald-500 to-teal-600' },
     { label: 'Manage Venues', icon: MapPin, path: '/admin/venues', gradient: 'from-amber-500 to-orange-600' },
     { label: 'Manage Teams', icon: Trophy, path: '/admin/teams', gradient: 'from-violet-500 to-purple-600' },
-    { label: 'Weekly Analytics', icon: BarChart3, path: '/admin/dashboard/weekly', gradient: 'from-pink-500 to-rose-600' },
-    { label: 'Monthly Analytics', icon: BarChart3, path: '/admin/dashboard/monthly', gradient: 'from-cyan-500 to-blue-600' },
+    { label: 'Analytics Dashboard', icon: BarChart3, path: '/admin/dashboard', gradient: 'from-pink-500 to-rose-600' },
 ];
 
 /**

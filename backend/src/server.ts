@@ -182,7 +182,7 @@ const startServer = async () => {
         await initializeStorage();
 
         // Step 4: Bind to the resolved port
-        const host = config.nodeEnv === 'production' ? '0.0.0.0' : 'localhost';
+        const host = config.nodeEnv === 'production' ? '0.0.0.0' : '127.0.0.1';
         server = app.listen(resolvedPort, host, () => {
             // Write the port file for Vite proxy
             writePortFile(resolvedPort);

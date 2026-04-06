@@ -33,10 +33,7 @@ import Unauthorized from './pages/Unauthorized';
 import ContactUs from './pages/ContactUs';
 
 // Admin Pages
-import AdminDashboard from './pages/admin/AdminDashboard';
-import WeeklyDashboard from './pages/admin/WeeklyDashboard';
-import MonthlyDashboard from './pages/admin/MonthlyDashboard';
-import YearlyDashboard from './pages/admin/YearlyDashboard';
+import Dashboard from './pages/admin/Dashboard';
 import PlayerManager from './pages/admin/PlayerManager';
 import EventManager from './pages/admin/EventManager';
 import VenueManager from './pages/admin/VenueManager';
@@ -112,10 +109,8 @@ function App() {
                 </ThemeProvider>
               </AdminRoute>
             }>
-              <Route index element={<AdminDashboard />} />
-              <Route path="dashboard/weekly" element={<WeeklyDashboard />} />
-              <Route path="dashboard/monthly" element={<MonthlyDashboard />} />
-              <Route path="dashboard/yearly" element={<YearlyDashboard />} />
+              <Route index element={<Navigate to="dashboard" replace />} />
+              <Route path="dashboard" element={<Dashboard />} />
               <Route path="players" element={<PlayerManager />} />
               <Route path="events" element={<EventManager />} />
               <Route path="venues" element={<VenueManager />} />

@@ -8,7 +8,7 @@ import path from 'path'
  * Falls back to 5000 if the file doesn't exist yet.
  */
 function getBackendPort() {
-  const portFile = path.resolve(__dirname, 'backend', '.port')
+  const portFile = path.resolve(__dirname, '../backend', '.port')
   try {
     if (fs.existsSync(portFile)) {
       const port = parseInt(fs.readFileSync(portFile, 'utf-8').trim(), 10)
@@ -34,7 +34,7 @@ export default defineConfig({
     // Proxy /api and /health requests to the backend
     proxy: {
       '/api': {
-        target: `http://localhost:${backendPort}`,
+        target: `http://127.0.0.1:${backendPort}`,
         changeOrigin: true,
         // Show helpful errors during development
         configure: (proxy) => {
@@ -44,11 +44,11 @@ export default defineConfig({
         },
       },
       '/health': {
-        target: `http://localhost:${backendPort}`,
+        target: `http://127.0.0.1:${backendPort}`,
         changeOrigin: true,
       },
       '/uploads': {
-        target: `http://localhost:${backendPort}`,
+        target: `http://127.0.0.1:${backendPort}`,
         changeOrigin: true,
       },
     },

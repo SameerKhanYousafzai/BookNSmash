@@ -112,11 +112,15 @@ export const AuthProvider = ({ children }) => {
             }
 
             setIsAuthenticated(true);
-            setUserRole('ADMIN');
+            setUserRole(data.user.role || 'ADMIN');
             setCurrentUser(data.user);
-            persistAuth(data.user, 'ADMIN', data.accessToken, data.refreshToken);
+            persistAuth(data.user, data.user.role || 'ADMIN', data.accessToken, data.refreshToken);
 
-            navigate('/admin/dashboard/weekly');
+            if (data.user.role === 'ADMIN') {
+                navigate('/admin/dashboard');
+            } else {
+                navigate('/');
+            }
             return { success: true };
         } catch (error) {
             console.error('Admin login error:', error);

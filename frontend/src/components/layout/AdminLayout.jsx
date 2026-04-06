@@ -17,10 +17,7 @@ export default function AdminLayout() {
     const [sidebarOpen, setSidebarOpen] = useState(false);
 
     const navItems = [
-        { path: '/admin', label: 'Dashboard', icon: LayoutDashboard, exact: true },
-        { path: '/admin/dashboard/weekly', label: 'Weekly Stats', icon: Calendar },
-        { path: '/admin/dashboard/monthly', label: 'Monthly Stats', icon: TrendingUp },
-        { path: '/admin/dashboard/yearly', label: 'Yearly Stats', icon: LayoutDashboard },
+        { path: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
         { path: '/admin/players', label: 'Players', icon: Users },
         { path: '/admin/events', label: 'Events', icon: CalendarDays },
         { path: '/admin/venues', label: 'Venues', icon: MapPin },
