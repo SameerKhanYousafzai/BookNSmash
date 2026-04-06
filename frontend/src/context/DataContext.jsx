@@ -229,7 +229,7 @@ export const DataProvider = ({ children }) => {
         dispatch({ type: ACTIONS.SET_LOADING, payload: { teams: true } });
 
         try {
-            const res = await api.get(`/teams?_t=${Date.now()}`);
+            const res = await api.get(`/teams?limit=20&page=1&_t=${Date.now()}`);
             if (res.ok) {
                 const data = await res.json();
                 const fetchedTeams = data.teams || [];

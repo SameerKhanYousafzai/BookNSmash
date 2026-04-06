@@ -72,15 +72,15 @@ export default function YearlyDashboard() {
                 />
                 <StatsCard
                     title="Matches Created"
-                    value={(stats.matchesCreated || 1350).toLocaleString()}
-                    trend={stats.matchesTrend || '+18%'}
+                    value={stats.matchesCreated?.toLocaleString() || '0'}
+                    trend={stats.matchesTrend || '0%'}
                     icon={Calendar}
                     color="green"
                 />
                 <StatsCard
                     title="Events Hosted"
-                    value={stats.eventsHosted || 148}
-                    trend={stats.eventsTrend || '+12%'}
+                    value={stats.eventsHosted?.toLocaleString() || '0'}
+                    trend={stats.eventsTrend || '0%'}
                     icon={Trophy}
                     color="purple"
                 />

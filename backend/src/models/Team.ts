@@ -1,5 +1,5 @@
-import { eq, ilike, and } from 'drizzle-orm';
-import { db, teams, teamMembers } from '../db';
+import { eq, ilike, and, sql } from 'drizzle-orm';
+import { db, teams, teamMembers, users } from '../db';
 
 // Types derived from Drizzle schema
 type Team = typeof teams.$inferSelect & { memberIds?: string[] };
@@ -71,18 +71,40 @@ export const findTeamById = async (id: string): Promise<Team | undefined> => {
 
 export const getAllTeams = async (filters?: {
     sport?: string;
-}): Promise<Team[]> => {
-    let rawTeams;
+    limit?: number;
+    page?: number;
+}): Promise<any[]> => {
+    const limitNum = filters?.limit || 20;
+    const pageNum = filters?.page || 1;
+    const offsetNum = (pageNum - 1) * limitNum;
+
+    // Single query joining users for captain name and team_members for member count.
+    const query = db
+        .select({
+            id: teams.id,
+            name: teams.name,
+            sport: teams.sport,
+            wins: teams.wins,
+            losses: teams.losses,
+            description: teams.description,
+            createdAt: teams.createdAt,
+            updatedAt: teams.updatedAt,
+            captainId: teams.captainId,
+            captain: users.name,
+            members: sql<number>`count(distinct ${teamMembers.userId})::int`,
+        })
+        .from(teams)
+        .leftJoin(users, eq(teams.captainId, users.id))
+        .leftJoin(teamMembers, eq(teams.id, teamMembers.teamId))
+        .limit(limitNum)
+        .offset(offsetNum)
+        .groupBy(teams.id, users.id, users.name);
+
     if (filters?.sport) {
-        rawTeams = await db
-            .select()
-            .from(teams)
-            .where(ilike(teams.sport, filters.sport));
-    } else {
-        rawTeams = await db.select().from(teams);
+        query.where(ilike(teams.sport, filters.sport));
     }
-    
-    return await Promise.all(rawTeams.map(attachMembers));
+
+    return await query;
 };
 
 export const updateTeam = async (

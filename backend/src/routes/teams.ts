@@ -18,10 +18,12 @@ const router = Router();
 // GET /api/teams - List all teams (public)
 router.get('/', async (req: Request, res: Response) => {
     try {
-        const { sport } = req.query;
+        const { sport, page, limit } = req.query;
 
         const teams = await getAllTeams({
             sport: sport as string,
+            page: page ? parseInt(page as string) : 1,
+            limit: limit ? parseInt(limit as string) : 20
         });
 
         res.json({

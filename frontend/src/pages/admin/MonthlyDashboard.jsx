@@ -68,15 +68,15 @@ export default function MonthlyDashboard() {
                 />
                 <StatsCard
                     title="Matches Created"
-                    value={stats.matchesCreated || 42}
-                    trend={stats.matchesTrend || '+8%'}
+                    value={stats.matchesCreated?.toLocaleString() || '0'}
+                    trend={stats.matchesTrend || '0%'}
                     icon={Calendar}
                     color="green"
                 />
                 <StatsCard
                     title="Events Hosted"
-                    value={stats.eventsHosted || 12}
-                    trend={stats.eventsTrend || '+5%'}
+                    value={stats.eventsHosted?.toLocaleString() || '0'}
+                    trend={stats.eventsTrend || '0%'}
                     icon={Trophy}
                     color="purple"
                 />
@@ -181,11 +181,11 @@ export default function MonthlyDashboard() {
                 <h3 className="font-bold text-gray-900 mb-3">Monthly Summary</h3>
                 <p className="text-gray-700 leading-relaxed">
                     The past month has been exceptional with <strong>{stats.registrations} new user registrations</strong>,
-                    representing a <strong>{stats.registrationsTrend || '+15%'}</strong> growth compared to the previous month.
-                    The platform successfully facilitated <strong>{stats.matchesCreated || 42} matches</strong> across various sports
-                    and hosted <strong>{stats.eventsHosted || 12} events</strong>. Total revenue reached
+                    representing a <strong>{stats.registrationsTrend || '0%'}</strong> growth compared to the previous month.
+                    The platform successfully facilitated <strong>{stats.matchesCreated?.toLocaleString() || '0'} matches</strong> across various sports
+                    and hosted <strong>{stats.eventsHosted?.toLocaleString() || '0'} events</strong>. Total revenue reached
                     <strong> {formatCurrency(stats.totalEarnings)}</strong>, showing a healthy
-                    <strong> {stats.earningsTrend || '+20%'}</strong> increase.
+                    <strong> {stats.earningsTrend || '0%'}</strong> increase.
                 </p>
             </Card>
         </div>

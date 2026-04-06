@@ -141,6 +141,7 @@ export const teams = pgTable(
     (table) => [
         index('teams_captain_id_idx').on(table.captainId),
         uniqueIndex('teams_captain_sport_idx').on(table.captainId, table.sport),
+        index('teams_created_at_idx').on(table.createdAt),
     ]
 );
 
@@ -178,6 +179,7 @@ export const eventRegistrations = pgTable(
     (table) => [
         uniqueIndex('event_reg_user_event_idx').on(table.userId, table.eventId),
         index('event_reg_user_id_idx').on(table.userId),
+        index('event_reg_registered_at_idx').on(table.registeredAt),
     ]
 );
 
@@ -206,6 +208,7 @@ export const venueBookings = pgTable(
     },
     (table) => [
         index('venue_bookings_time_idx').on(table.startTime, table.endTime),
+        index('venue_bookings_created_at_idx').on(table.createdAt),
     ]
 );
 
@@ -228,7 +231,10 @@ export const matches = pgTable('matches', {
     score: text('score'),
     matchDate: timestamp('match_date', { withTimezone: true }).notNull(),
     status: matchStatusEnum('status').default('SCHEDULED').notNull(),
-});
+},
+(table) => [
+    index('matches_match_date_idx').on(table.matchDate),
+]);
 
 // ─── Products (Shop) ─────────────────────────────────────────────────────────
 

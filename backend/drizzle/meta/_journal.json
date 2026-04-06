@@ -22,6 +22,13 @@
       "when": 1774973338403,
       "tag": "0002_clear_inhumans",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1775479190872,
+      "tag": "0003_typical_chronomancer",
+      "breakpoints": true
     }
   ]
 }
