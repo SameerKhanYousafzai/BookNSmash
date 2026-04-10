@@ -243,16 +243,11 @@ export default function Dashboard() {
                     )}
                 </div>
                 
-                <div className="lg:col-span-1 border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 rounded-2xl shadow-sm">
-                    {/* Render external module or fallback to internal representation */}
-                    {stats?.topSports && stats.topSports.length > 0 ? (
+                {stats?.topSports && stats.topSports.length > 0 && (
+                    <div className="lg:col-span-1 border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 rounded-2xl shadow-sm">
                         <SportDistributionChart data={stats.topSports} />
-                    ) : (
-                        <div className="p-6 flex items-center justify-center h-full text-gray-500">
-                            Insufficient Sport Data Available
-                        </div>
-                    )}
-                </div>
+                    </div>
+                )}
             </div>
 
             {/* Drilldown Modal */}

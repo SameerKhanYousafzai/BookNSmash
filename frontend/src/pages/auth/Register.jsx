@@ -4,6 +4,8 @@ import { User, Mail, Lock, AlertCircle, CheckCircle, Eye, EyeOff } from 'lucide-
 import FormInput from '../../components/common/FormInput';
 import Button from '../../components/common/Button';
 import { useAuth } from '../../context/AuthContext';
+import { FaGoogle, FaMicrosoft } from 'react-icons/fa';
+import { supabase } from '../../services/supabase';
 
 export default function Register() {
     const { registerUser } = useAuth();
@@ -64,6 +66,21 @@ export default function Register() {
             } else {
                 setMessage({ type: 'error', text: result.message });
             }
+        }
+    };
+
+    const handleOAuthLogin = async (provider) => {
+        try {
+            const { error } = await supabase.auth.signInWithOAuth({
+                provider: provider,
+                options: {
+                    redirectTo: `${window.location.origin}/auth/callback`,
+                },
+            });
+            if (error) throw error;
+        } catch (error) {
+            console.error('OAuth registration error:', error.message);
+            setMessage({ type: 'error', text: 'Failed to initialize OAuth' });
         }
     };
 
@@ -219,6 +236,34 @@ export default function Register() {
                         <Button type="submit" variant="primary" className="w-full">
                             Create Account
                         </Button>
+                        
+                        <div className="relative my-6">
+                            <div className="absolute inset-0 flex items-center">
+                                <div className="w-full border-t border-gray-300"></div>
+                            </div>
+                            <div className="relative flex justify-center text-sm">
+                                <span className="px-2 bg-white text-gray-500">Or continue with</span>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3">
+                            <button
+                                type="button"
+                                onClick={() => handleOAuthLogin('google')}
+                                className="w-full inline-flex justify-center items-center py-2.5 px-4 border border-gray-300 rounded-xl shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                            >
+                                <FaGoogle className="w-4 h-4 text-red-500 mr-2" />
+                                Google
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => handleOAuthLogin('azure')}
+                                className="w-full inline-flex justify-center items-center py-2.5 px-4 border border-gray-300 rounded-xl shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                            >
+                                <FaMicrosoft className="w-4 h-4 text-blue-600 mr-2" />
+                                Microsoft
+                            </button>
+                        </div>
                     </form>
 
                     <div className="mt-6 text-center">

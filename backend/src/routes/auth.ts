@@ -134,6 +134,45 @@ router.post('/admin/login', validate(loginSchema), async (req: Request, res: Res
     }
 });
 
+// POST /api/auth/oauth-sync - Sync OAuth session and return local tokens
+router.post('/oauth-sync', async (req: Request, res: Response) => {
+    try {
+        const { email, name, provider, providerId } = req.body;
+
+        if (!email) {
+            return res.status(400).json({ error: 'OAuth sync failed', message: 'Email is required' });
+        }
+
+        // Find user by email to see if they already exist
+        let user = await findUserByEmail(email);
+
+        if (!user) {
+            // First time login via OAuth – implicitly register them as a standard USER
+            const randomPassword = crypto.randomBytes(32).toString('hex');
+            user = await createUser({ name: name || email.split('@')[0], email, password: randomPassword });
+        }
+
+        // Generate local BookNSmash tokens to maintain our specific backend API security logic
+        const accessToken = generateAccessToken(user.id, user.role, user.name);
+        const refreshToken = generateRefreshToken(user.id);
+
+        res.cookie('accessToken', accessToken, { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', maxAge: 15 * 60 * 1000 });
+        res.cookie('refreshToken', refreshToken, { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', maxAge: 7 * 24 * 60 * 60 * 1000 });
+
+        res.json({
+            message: 'OAuth sync successful',
+            user: sanitizeUser(user),
+            accessToken,
+            refreshToken,
+        });
+    } catch (error) {
+        res.status(500).json({
+            error: 'OAuth sync failed',
+            message: error instanceof Error ? error.message : 'Unknown error',
+        });
+    }
+});
+
 // POST /api/auth/refresh - Refresh access token
 router.post('/refresh', async (req: Request, res: Response) => {
     try {

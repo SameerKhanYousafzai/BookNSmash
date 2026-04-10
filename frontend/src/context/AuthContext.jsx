@@ -131,6 +131,39 @@ export const AuthProvider = ({ children }) => {
     };
 
     /**
+     * Handle OAuth Sync — calls POST /api/auth/oauth-sync
+     * Syncs Supabase OAuth user with local database and issues local session tokens.
+     */
+    const handleOAuthSync = async (email, name, provider, providerId) => {
+        setLoading(true);
+        try {
+            const res = await api.post('/auth/oauth-sync', { email, name, provider, providerId });
+            const data = await res.json();
+
+            if (!res.ok) {
+                return { success: false, message: data.message || 'OAuth sync failed' };
+            }
+
+            setIsAuthenticated(true);
+            setUserRole(data.user.role || 'USER');
+            setCurrentUser(data.user);
+            persistAuth(data.user, data.user.role || 'USER', data.accessToken, data.refreshToken);
+
+            if (data.user.role === 'ADMIN') {
+                navigate('/admin/dashboard');
+            } else {
+                navigate('/');
+            }
+            return { success: true };
+        } catch (error) {
+            console.error('OAuth sync error:', error);
+            return { success: false, message: error.message || 'Network error. Is the backend running?' };
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    /**
      * Logout — clears all authentication data
      */
     const logout = async () => {
@@ -160,6 +193,7 @@ export const AuthProvider = ({ children }) => {
         loginUser,
         registerUser,
         loginAdmin,
+        handleOAuthSync,
         logout,
     };
 
