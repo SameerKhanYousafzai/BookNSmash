@@ -153,7 +153,8 @@ process.on('uncaughtException', (err) => {
 const startServer = async () => {
     const preferredPort = config.port;
 
-    console.log('\n🔄 Starting BookNSmash Backend...');
+        console.log('\n🔄 Starting BookNSmash Backend...');
+    console.log(`   process.env.PORT: ${process.env.PORT || 'NOT SET (reverting to fallback 5000)'}`);
     console.log(`   Preferred port: ${preferredPort}`);
     console.log(`   Environment: ${config.nodeEnv}`);
 
@@ -188,8 +189,8 @@ const startServer = async () => {
             writePortFile(resolvedPort);
 
             console.log(`\n✅ Backend server is READY`);
-            console.log(`   📡 http://localhost:${resolvedPort}`);
-            console.log(`   🏥 Health check: http://localhost:${resolvedPort}/health`);
+            console.log(`   📡 Bound to: http://${host}:${resolvedPort}`);
+            console.log(`   🏥 Health check: http://${host === '0.0.0.0' ? 'localhost' : host}:${resolvedPort}/health`);
             console.log(`   🔗 CORS: localhost:5173 + dynamic localhost ports`);
             console.log(`   🔐 Admin: admin@booknsmash.com / admin123\n`);
         });
