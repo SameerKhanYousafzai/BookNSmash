@@ -30,9 +30,9 @@ export default defineConfig({
     // Proxy /api and /health requests to the backend
     proxy: {
       '/api': {
-        target: 'http://127.0.0.1:5000',
+        target: 'http://localhost:5000',
         changeOrigin: true,
-        router: () => `http://127.0.0.1:${getBackendPort()}`,
+        router: () => `http://localhost:${getBackendPort()}`,
         // Show helpful errors during development
         configure: (proxy) => {
           proxy.on('error', (err) => {
@@ -41,14 +41,14 @@ export default defineConfig({
         },
       },
       '/health': {
-        target: 'http://127.0.0.1:5000',
+        target: 'http://localhost:5000',
         changeOrigin: true,
-        router: () => `http://127.0.0.1:${getBackendPort()}`,
+        router: () => `http://localhost:${getBackendPort()}`,
       },
       '/uploads': {
-        target: 'http://127.0.0.1:5000',
+        target: 'http://localhost:5000',
         changeOrigin: true,
-        router: () => `http://127.0.0.1:${getBackendPort()}`,
+        router: () => `http://localhost:${getBackendPort()}`,
       },
     },
   },
