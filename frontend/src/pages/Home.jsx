@@ -5,7 +5,6 @@ import Card from '../components/common/Card';
 import { useData } from '../context/DataContext';
 import { formatCurrency } from '../utils/currency';
 import { useState } from 'react';
-import sportsHeroImg from '../assets/sports-hero.png';
 
 export default function Home() {
     const { events, loading, sportsCategories } = useData();
@@ -49,7 +48,7 @@ export default function Home() {
                         {/* Right Column — Illustration (45%) */}
                         <div className="w-full lg:w-[45%] relative" style={{ mixBlendMode: 'screen' }}>
                             <img
-                                src={sportsHeroImg}
+                                src="/sports-hero.png"
                                 alt="Sports players illustration"
                                 className="w-full max-w-lg mx-auto lg:max-w-none lg:w-[110%] select-none pointer-events-none animate-fade-in-delay"
                                 style={{

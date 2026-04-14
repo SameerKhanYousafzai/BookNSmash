@@ -13,18 +13,14 @@ function getBackendPort() {
     if (fs.existsSync(portFile)) {
       const port = parseInt(fs.readFileSync(portFile, 'utf-8').trim(), 10)
       if (port > 0 && port < 65536) {
-        console.log(`[vite] 📡 Proxying /api → http://localhost:${port} (from .port file)`)
         return port
       }
     }
   } catch {
     // Fall through to default
   }
-  console.log('[vite] 📡 Proxying /api → http://localhost:5000 (default)')
   return 5000
 }
-
-const backendPort = getBackendPort()
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -34,8 +30,9 @@ export default defineConfig({
     // Proxy /api and /health requests to the backend
     proxy: {
       '/api': {
-        target: `http://127.0.0.1:${backendPort}`,
+        target: 'http://127.0.0.1:5000',
         changeOrigin: true,
+        router: () => `http://127.0.0.1:${getBackendPort()}`,
         // Show helpful errors during development
         configure: (proxy) => {
           proxy.on('error', (err) => {
@@ -44,12 +41,14 @@ export default defineConfig({
         },
       },
       '/health': {
-        target: `http://127.0.0.1:${backendPort}`,
+        target: 'http://127.0.0.1:5000',
         changeOrigin: true,
+        router: () => `http://127.0.0.1:${getBackendPort()}`,
       },
       '/uploads': {
-        target: `http://127.0.0.1:${backendPort}`,
+        target: 'http://127.0.0.1:5000',
         changeOrigin: true,
+        router: () => `http://127.0.0.1:${getBackendPort()}`,
       },
     },
   },
